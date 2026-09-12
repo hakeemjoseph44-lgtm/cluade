@@ -656,17 +656,25 @@ const LAST_NAMES = ['Williams','Johnson','Brown','Davis','Wilson','Anderson','Th
 const HS_OPPONENTS = ['Westview High','Central Academy','Eastside Prep','North Valley','Southfield Academy','Heritage High','Summit Prep','Lakewood High','Crestview Academy','Pacific High','Mountain View','Capital Prep'];
 
 const INJURIES = [
-  { type: 'Ankle Sprain', severity: 'minor', minWeeks: 1, maxWeeks: 2, attrs: ['speed','vertical'], penalty: 5 },
-  { type: 'Knee Strain', severity: 'minor', minWeeks: 2, maxWeeks: 3, attrs: ['speed','vertical','layup'], penalty: 6 },
-  { type: 'Hamstring Pull', severity: 'moderate', minWeeks: 3, maxWeeks: 5, attrs: ['speed','stamina'], penalty: 8 },
+  { type: 'Bruised Knee', severity: 'day-to-day', minWeeks: 1, maxWeeks: 1, attrs: ['speed'], penalty: 2 },
+  { type: 'Jammed Finger', severity: 'day-to-day', minWeeks: 1, maxWeeks: 1, attrs: ['threePoint'], penalty: 2 },
+  { type: 'Hip Soreness', severity: 'day-to-day', minWeeks: 1, maxWeeks: 1, attrs: ['speed','vertical'], penalty: 2 },
+  { type: 'Ankle Sprain', severity: 'minor', minWeeks: 1, maxWeeks: 3, attrs: ['speed','vertical'], penalty: 4 },
+  { type: 'Knee Strain', severity: 'minor', minWeeks: 2, maxWeeks: 3, attrs: ['speed','vertical','layup'], penalty: 5 },
   { type: 'Finger Sprain', severity: 'minor', minWeeks: 1, maxWeeks: 2, attrs: ['threePoint','midRange','freeThrow'], penalty: 4 },
-  { type: 'Back Spasms', severity: 'moderate', minWeeks: 2, maxWeeks: 4, attrs: ['strength','rebounding'], penalty: 7 },
-  { type: 'Wrist Injury', severity: 'minor', minWeeks: 1, maxWeeks: 3, attrs: ['ballHandling','passing','threePoint'], penalty: 5 },
-  { type: 'Shoulder Strain', severity: 'moderate', minWeeks: 3, maxWeeks: 6, attrs: ['dunk','closeShot','strength'], penalty: 8 },
-  { type: 'Concussion', severity: 'moderate', minWeeks: 2, maxWeeks: 4, attrs: ['passing','ballHandling'], penalty: 6 },
-  { type: 'Broken Hand', severity: 'severe', minWeeks: 6, maxWeeks: 10, attrs: ['closeShot','midRange','threePoint','freeThrow','ballHandling'], penalty: 12 },
-  { type: 'ACL Tear', severity: 'severe', minWeeks: 20, maxWeeks: 30, attrs: ['speed','vertical','layup','dunk'], penalty: 15 },
+  { type: 'Wrist Injury', severity: 'minor', minWeeks: 1, maxWeeks: 3, attrs: ['ballHandling','passing','threePoint'], penalty: 4 },
+  { type: 'Calf Strain', severity: 'minor', minWeeks: 2, maxWeeks: 3, attrs: ['speed','stamina'], penalty: 4 },
+  { type: 'Hamstring Pull', severity: 'moderate', minWeeks: 3, maxWeeks: 5, attrs: ['speed','stamina'], penalty: 6 },
+  { type: 'Back Spasms', severity: 'moderate', minWeeks: 2, maxWeeks: 4, attrs: ['strength','rebounding'], penalty: 6 },
+  { type: 'Shoulder Strain', severity: 'moderate', minWeeks: 3, maxWeeks: 6, attrs: ['dunk','closeShot','strength'], penalty: 7 },
+  { type: 'Concussion', severity: 'moderate', minWeeks: 2, maxWeeks: 4, attrs: ['passing','ballHandling'], penalty: 5 },
+  { type: 'Quad Strain', severity: 'moderate', minWeeks: 3, maxWeeks: 5, attrs: ['speed','vertical','dunk'], penalty: 6 },
+  { type: 'Broken Hand', severity: 'severe', minWeeks: 8, maxWeeks: 14, attrs: ['closeShot','midRange','threePoint','freeThrow','ballHandling'], penalty: 10 },
+  { type: 'ACL Tear', severity: 'severe', minWeeks: 24, maxWeeks: 36, attrs: ['speed','vertical','layup','dunk'], penalty: 14 },
+  { type: 'Achilles Tear', severity: 'severe', minWeeks: 20, maxWeeks: 32, attrs: ['speed','vertical','stamina'], penalty: 13 },
+  { type: 'Torn Meniscus', severity: 'severe', minWeeks: 10, maxWeeks: 18, attrs: ['speed','vertical','rebounding'], penalty: 10 },
 ];
+const INJURY_SEVERITY_ORDER = { 'day-to-day': 0, minor: 1, moderate: 2, severe: 3 };
 
 const MILESTONE_DEFS = [
   { id: 'games100', text: '100 Career Games', icon: '\u{1F3C0}', check: g => g.career.totalGames >= 100 },
@@ -1451,7 +1459,7 @@ function renderDevelopmentPage(c) {
     return;
   }
 
-  const inj = G.phase === 'pro' ? G.pro.currentInjury : null;
+  const inj = G.phase === 'pro' ? G.pro.currentInjury : G.phase === 'college' ? G._collegeInjury : null;
   const names = ['Practice', 'Film Study', 'Strength & Conditioning', 'Defense Drills', 'Social / Rest'];
   const icons = ['\u{1F3C0}','\u{1F4FA}','\u{1F4AA}','\u{1F6E1}','\u{1F6CC}'];
   const descs = ['Improve shooting, ball handling, and offensive skills','Boost basketball IQ (small chance to improve any attribute)','Build speed, strength, stamina, and vertical','Improve defensive attributes: perimeter, interior, steals, blocks','Recover fatigue, prevent burnout, boost morale'];
@@ -1469,7 +1477,7 @@ function renderDevelopmentPage(c) {
   const motInfo = getMotivationLabel(G.player.motivation||70);
 
   c.innerHTML = `
-    ${inj ? `<div class="injury-banner"><span class="inj-icon">\u{1FA79}</span><div class="inj-text"><strong>${esc(inj.type)}</strong> — Only film study is available while injured.</div><span class="inj-weeks">${inj.weeksLeft} wk${inj.weeksLeft!==1?'s':''}</span></div>` : ''}
+    ${inj ? `<div class="injury-banner"><span class="inj-icon">\u{1FA79}</span><div class="inj-text"><strong>${esc(inj.type)}</strong> <span style="font-size:11px;opacity:0.7;">(${inj.severity})</span> — ${inj.severity==='day-to-day'?'Limited practice available.':'Only film study and rest available.'}</div><span class="inj-weeks">${inj.weeksLeft} wk${inj.weeksLeft!==1?'s':''}</span></div>` : ''}
     <div class="card">
       <div class="card-title">Weekly Training Plan &mdash; Week ${G.season.week}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -1477,7 +1485,8 @@ function renderDevelopmentPage(c) {
         <span style="font-size:12px;color:var(--text-muted);">Fatigue: ${G.player.fatigue||0}% &middot; Morale: ${G.player.morale||80}% &middot; Motivation: <span style="color:${motInfo.color};">${motInfo.label}</span></span>
       </div>
       ${names.map((name,i)=>{
-        const locked = inj && (i === 0 || i === 2 || i === 3);
+        const isDayToDay = inj && inj.severity === 'day-to-day';
+        const locked = inj && !isDayToDay ? (i === 0 || i === 2 || i === 3) : isDayToDay ? (i === 2 || i === 3) : false;
         const curTotal = alloc.reduce((s,v)=>s+v,0);
         return `
         <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);${locked?'opacity:0.4;':''}">
@@ -1514,7 +1523,8 @@ function simWeek() {
   const alloc = G._weekAlloc||[2,1,1,1,2];
   const a = G.player.attributes, caps = G.player.potentialCaps;
   const phase = G.phase;
-  const injured = phase === 'pro' && G.pro.currentInjury;
+  const injured = (phase === 'pro' && G.pro.currentInjury) || (phase === 'college' && G._collegeInjury);
+  const currentInjury = phase === 'pro' ? G.pro.currentInjury : G._collegeInjury;
   const devMul = phase==='highschool' ? (HIGH_SCHOOLS.find(h=>h.id===G.highSchool.school)?.devBonus||1)
     : phase==='college' ? (COLLEGE_PROGRAMS.find(p=>p.id===G.college.school)?.coach.devBonus||1) : 0.7;
 
@@ -1526,17 +1536,22 @@ function simWeek() {
   const fatigueMul = fatigue >= 80 ? 0.6 : fatigue >= 50 ? 0.8 : 1.0;
   const trainChanceMod = motMul * moraleMul * fatigueMul;
 
-  if (injured) {
+  const isDayToDay = injured && currentInjury && currentInjury.severity === 'day-to-day';
+  const offKeys = ['closeShot','midRange','threePoint','freeThrow','layup','dunk','ballHandling','passing'];
+  const defKeys = ['interiorDef','perimeterDef','rebounding','steal','block'];
+  const physKeys = ['speed','strength','stamina','vertical'];
+  if (injured && !isDayToDay) {
     for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key; if(Math.random()<0.2*trainChanceMod&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+1);results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1 (Film Study)');}}
-    results.push(`Injured (${G.pro.currentInjury.type}) — limited to film study only`);
+    results.push(`Injured (${currentInjury.type}) — limited to film study and rest`);
   } else {
-    const offKeys = ['closeShot','midRange','threePoint','freeThrow','layup','dunk','ballHandling','passing'];
-    const defKeys = ['interiorDef','perimeterDef','rebounding','steal','block'];
-    const physKeys = ['speed','strength','stamina','vertical'];
-    for(let s=0;s<alloc[0];s++){const k=randFrom(offKeys); if(Math.random()<0.55*trainChanceMod&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+Math.round(devMul));results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1');}}
+    if (!injured || isDayToDay) {
+      for(let s=0;s<alloc[0];s++){const k=randFrom(offKeys); if(Math.random()<0.55*trainChanceMod&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+Math.round(devMul));results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1');}}
+    }
     for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key; if(Math.random()<0.25*trainChanceMod&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+1);results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1 (IQ)');}}
-    for(let s=0;s<alloc[2];s++){const k=randFrom(physKeys); if(Math.random()<0.55*trainChanceMod&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+Math.round(devMul));results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1');}}
-    for(let s=0;s<alloc[3];s++){const k=randFrom(defKeys); if(Math.random()<0.55*trainChanceMod&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+Math.round(devMul));results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1 (Defense)');}}
+    if (!injured) {
+      for(let s=0;s<alloc[2];s++){const k=randFrom(physKeys); if(Math.random()<0.55*trainChanceMod&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+Math.round(devMul));results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1');}}
+      for(let s=0;s<alloc[3];s++){const k=randFrom(defKeys); if(Math.random()<0.55*trainChanceMod&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+Math.round(devMul));results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1 (Defense)');}}
+    }
   }
 
   if (trainChanceMod < 0.85) results.push(`Training reduced (${fatigue>=50?'tired ':''}${morale<40?'low morale ':''}${mot<40?'unmotivated':''})`);
@@ -1555,13 +1570,22 @@ function simWeek() {
   if (restSessions >= 3) motDelta += 1;
   G.player.motivation = clamp((G.player.motivation||70) + motDelta, 0, 100);
 
-  if (phase === 'pro' && G.pro.currentInjury) {
-    G.pro.currentInjury.weeksLeft--;
-    if (G.pro.currentInjury.weeksLeft <= 0) {
-      results.push(`\u{2705} Recovered from ${G.pro.currentInjury.type}!`);
-      G.pro.currentInjury = null;
+  if (currentInjury) {
+    currentInjury.weeksLeft--;
+    if (currentInjury.weeksLeft <= 0) {
+      results.push(`\u{2705} Recovered from ${currentInjury.type}!`);
+      const sev = currentInjury.severity;
+      if (sev === 'moderate' || sev === 'severe') {
+        const penaltyAmt = sev === 'severe' ? Math.round(currentInjury.penalty * 0.4) : Math.round(currentInjury.penalty * 0.2);
+        (currentInjury.attrs||[]).forEach(k => {
+          a[k] = Math.max(25, (a[k]||25) - penaltyAmt);
+        });
+        if (penaltyAmt > 0) results.push(`Lingering effects: -${penaltyAmt} to ${(currentInjury.attrs||[]).map(k=>ATTRIBUTES.find(x=>x.key===k)?.name||k).join(', ')}`);
+      }
+      if (phase === 'pro') G.pro.currentInjury = null;
+      else G._collegeInjury = null;
     } else {
-      results.push(`\u{1FA79} ${G.pro.currentInjury.type}: ${G.pro.currentInjury.weeksLeft} week(s) remaining`);
+      results.push(`\u{1FA79} ${currentInjury.type}: ${currentInjury.weeksLeft} week(s) remaining`);
     }
   }
 
@@ -1570,12 +1594,15 @@ function simWeek() {
   while(G.season.nextGameIdx < sched.length && sched[G.season.nextGameIdx].week <= G.season.week) {
     if (injured) {
       const entry = sched[G.season.nextGameIdx];
-      const teamOvr = G.pro.roster.length > 0 ? G.pro.roster.reduce((s,t)=>s+t.ovr,0)/G.pro.roster.length : 65;
+      let teamOvr = 65;
+      if (phase === 'pro' && G.pro.roster.length > 0) teamOvr = G.pro.roster.reduce((s,t)=>s+t.ovr,0)/G.pro.roster.length;
+      else if (phase === 'college' && G.college.roster.length > 0) teamOvr = G.college.roster.reduce((s,t)=>s+t.ovr,0)/G.college.roster.length;
       const ts = clamp(Math.round(55 + teamOvr*0.5 + randInt(-12,12)), 45, 120);
       const os = clamp(Math.round(55 + entry.oppStrength*0.7 + randInt(-12,12)), 40, 125);
       entry.played = true;
       entry.result = { opponent: entry.opponent, pts:0, reb:0, ast:0, stl:0, blk:0, min:0, fgm:0, fga:0, tpm:0, tpa:0, ftm:0, fta:0, won: ts > os, teamScore: ts, oppScore: os, week: entry.week, dnp: true };
-      if (ts > os) G.pro.record.w++; else G.pro.record.l++;
+      const rec = phase === 'pro' ? G.pro.record : phase === 'college' ? G.college.record : G.highSchool.record;
+      if (ts > os) rec.w++; else rec.l++;
       G.season.nextGameIdx++;
       results.push(`Game vs ${entry.opponent}: ${ts>os?'W':'L'} ${ts}-${os} (DNP - Injured)`);
     } else {
@@ -1617,30 +1644,42 @@ function simToNextGame() {
 function simWeekSilent() {
   const alloc = G._weekAlloc||[2,1,1,1,2];
   const a = G.player.attributes, caps = G.player.potentialCaps;
-  const injured = G.phase === 'pro' && G.pro.currentInjury;
+  const injured = (G.phase === 'pro' && G.pro.currentInjury) || (G.phase === 'college' && G._collegeInjury);
+  const currentInjury = G.phase === 'pro' ? G.pro.currentInjury : G._collegeInjury;
   const devMul = G.phase==='highschool'?(HIGH_SCHOOLS.find(h=>h.id===G.highSchool.school)?.devBonus||1)
     :G.phase==='college'?(COLLEGE_PROGRAMS.find(p=>p.id===G.college.school)?.coach.devBonus||1):0.7;
   const mot=G.player.motivation||70, morale=G.player.morale||80, fatigue=G.player.fatigue||0;
   const trainMod=(mot>=80?1.15:mot>=60?1.0:mot>=40?0.85:0.65)*(morale>=70?1.1:morale>=40?1.0:0.8)*(fatigue>=80?0.6:fatigue>=50?0.8:1.0);
-  if (!injured) {
-    const offKeys=['closeShot','midRange','threePoint','freeThrow','layup','dunk','ballHandling','passing'];
-    const defKeys=['interiorDef','perimeterDef','rebounding','steal','block'];
-    const physKeys=['speed','strength','stamina','vertical'];
-    for(let s=0;s<alloc[0];s++){const k=randFrom(offKeys);if(Math.random()<0.55*trainMod&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+Math.round(devMul));}
-    for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key;if(Math.random()<0.25*trainMod&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+1);}
-    for(let s=0;s<alloc[2];s++){const k=randFrom(physKeys);if(Math.random()<0.55*trainMod&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+Math.round(devMul));}
-    for(let s=0;s<alloc[3];s++){const k=randFrom(defKeys);if(Math.random()<0.55*trainMod&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+Math.round(devMul));}
-  } else {
+  const isDTD = injured && currentInjury && currentInjury.severity === 'day-to-day';
+  const offK=['closeShot','midRange','threePoint','freeThrow','layup','dunk','ballHandling','passing'];
+  const defK=['interiorDef','perimeterDef','rebounding','steal','block'];
+  const phyK=['speed','strength','stamina','vertical'];
+  if (injured && !isDTD) {
     for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key;if(Math.random()<0.2*trainMod&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+1);}
+  } else {
+    if (!injured || isDTD) for(let s=0;s<alloc[0];s++){const k=randFrom(offK);if(Math.random()<0.55*trainMod&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+Math.round(devMul));}
+    for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key;if(Math.random()<0.25*trainMod&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+1);}
+    if (!injured) {
+      for(let s=0;s<alloc[2];s++){const k=randFrom(phyK);if(Math.random()<0.55*trainMod&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+Math.round(devMul));}
+      for(let s=0;s<alloc[3];s++){const k=randFrom(defK);if(Math.random()<0.55*trainMod&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+Math.round(devMul));}
+    }
   }
   const workSess=alloc[0]+alloc[1]+alloc[2]+alloc[3];
   G.player.fatigue=clamp((G.player.fatigue||0)+(injured?-8:workSess*2-alloc[4]*5),0,100);
   G.player.morale=clamp((G.player.morale||80)+alloc[4]*3-(G.player.fatigue>60?5:0)-(injured?3:0),20,100);
   let motD=0; if(G.player.morale>=70)motD+=1; if(G.player.morale<=30)motD-=2; if(G.player.fatigue>=70)motD-=1; if(alloc[4]>=3)motD+=1;
   G.player.motivation=clamp((G.player.motivation||70)+motD,0,100);
-  if (G.phase === 'pro' && G.pro.currentInjury) {
-    G.pro.currentInjury.weeksLeft--;
-    if (G.pro.currentInjury.weeksLeft <= 0) G.pro.currentInjury = null;
+  if (currentInjury) {
+    currentInjury.weeksLeft--;
+    if (currentInjury.weeksLeft <= 0) {
+      const sev = currentInjury.severity;
+      if (sev === 'moderate' || sev === 'severe') {
+        const pen = sev === 'severe' ? Math.round(currentInjury.penalty * 0.4) : Math.round(currentInjury.penalty * 0.2);
+        (currentInjury.attrs||[]).forEach(k => { a[k] = Math.max(25, (a[k]||25) - pen); });
+      }
+      if (G.phase === 'pro') G.pro.currentInjury = null;
+      else G._collegeInjury = null;
+    }
   }
   G.season.week++;
   computeRatings();
@@ -1742,7 +1781,7 @@ function simGame(schedEntry) {
 
   G.player.fatigue = clamp((G.player.fatigue||0) + Math.round(min * 0.3), 0, 100);
 
-  if (phase === 'pro') checkInjury();
+  if (phase === 'pro' || phase === 'college') checkInjury();
 
   return game;
 }
@@ -2011,6 +2050,7 @@ function returnToCollege() {
   G.college.record = {w:0,l:0};
   G.college.currentSeasonStats = {gp:0,pts:0,reb:0,ast:0,stl:0,blk:0,min:0,fgm:0,fga:0,tpm:0,tpa:0,ftm:0,fta:0};
   G.college.gameLog = [];
+  G._collegeInjury = null;
   G.season.schedule = generateSchedule('college', prog?.tier);
   G.college.roster = G.college.roster.filter(t => t.year < 4).map(t => ({...t, year: t.year+1, ovr: clamp(t.ovr + randInt(-2,4), 40, 90)}));
   while(G.college.roster.length < 12) G.college.roster.push(generateTeammate(null, prog?.tier==='blueBlood'?[65,82]:prog?.tier==='midMajor'?[55,75]:[45,68]));
@@ -2900,21 +2940,34 @@ function esc(str) { const d=document.createElement('div'); d.textContent=str||''
 // ═══════════════════════════════════════════════════
 
 function checkInjury() {
-  if (!G.pro || G.pro.currentInjury) return;
+  const isPro = G.phase === 'pro';
+  const isCollege = G.phase === 'college';
+  if (!isPro && !isCollege) return;
+  if (isPro && G.pro.currentInjury) return;
+  if (isCollege && G._collegeInjury) return;
   const roll = Math.random();
-  const fatigueBonus = (G.player.fatigue || 0) / 300;
-  const ageBonus = G.player.age > 30 ? (G.player.age - 30) * 0.004 : 0;
+  const fatigue = G.player.fatigue || 0;
+  const fatigueBonus = fatigue > 40 ? (fatigue - 40) * 0.001 : 0;
+  const ageBonus = G.player.age > 30 ? (G.player.age - 30) * 0.002 : 0;
+  const phaseMod = isCollege ? 0.5 : 1.0;
   let inj = null;
-  if (roll < 0.002 + ageBonus) {
+  if (roll < (0.001 + ageBonus) * phaseMod) {
     inj = randFrom(INJURIES.filter(i=>i.severity==='severe'));
-  } else if (roll < 0.012 + fatigueBonus + ageBonus) {
+  } else if (roll < (0.006 + fatigueBonus + ageBonus) * phaseMod) {
     inj = randFrom(INJURIES.filter(i=>i.severity==='moderate'));
-  } else if (roll < 0.05 + fatigueBonus + ageBonus) {
+  } else if (roll < (0.018 + fatigueBonus + ageBonus) * phaseMod) {
     inj = randFrom(INJURIES.filter(i=>i.severity==='minor'));
+  } else if (roll < (0.035 + fatigueBonus * 2) * phaseMod) {
+    inj = randFrom(INJURIES.filter(i=>i.severity==='day-to-day'));
   }
   if (inj) {
-    G.pro.currentInjury = { type: inj.type, severity: inj.severity, weeksLeft: randInt(inj.minWeeks, inj.maxWeeks), attrs: inj.attrs, penalty: inj.penalty };
-    G.pro.injuries.push({ type: inj.type, severity: inj.severity, season: G.pro.seasonsPlayed, age: G.player.age, weeksOut: G.pro.currentInjury.weeksLeft });
+    const injObj = { type: inj.type, severity: inj.severity, weeksLeft: randInt(inj.minWeeks, inj.maxWeeks), attrs: inj.attrs, penalty: inj.penalty };
+    if (isPro) {
+      G.pro.currentInjury = injObj;
+      G.pro.injuries.push({ type: inj.type, severity: inj.severity, season: G.pro.seasonsPlayed, age: G.player.age, weeksOut: injObj.weeksLeft });
+    } else {
+      G._collegeInjury = injObj;
+    }
   }
 }
 
