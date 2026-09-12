@@ -722,14 +722,23 @@ function generateRoster(tier, excludePos) {
   return roster;
 }
 
+function getMaxWeeks(phase) {
+  if (phase === 'highschool') return 28;
+  if (phase === 'college') return 30;
+  return 42;
+}
+
 function generateSchedule(phase, tier) {
   const schedule = [];
   const numGames = phase === 'highschool' ? 20 : (tier === 'blueBlood' ? 33 : tier === 'midMajor' ? 31 : 28);
+  const maxW = getMaxWeeks(phase);
+  const gameSpan = phase === 'highschool' ? maxW - 4 : maxW - 4;
+  const startWeek = phase === 'highschool' ? 3 : 2;
   const confOpponents = phase === 'college' ? ['Conf. Rival A','Conf. Rival B','Conf. Rival C','Conf. Rival D','Conf. Rival E','Conf. Rival F'] : [];
   const ncaaOpponents = ['State University','Tech Institute','College of Arts','Northern State','Southern Tech','Metro University','Valley College','Coastal State','Prairie University','Mountain College','Lake University','River State'];
 
   for (let i = 0; i < numGames; i++) {
-    const weekNum = Math.floor(i * 26 / numGames) + 3;
+    const weekNum = Math.floor(i * gameSpan / numGames) + startWeek;
     let opponent, isConf = false;
     if (phase === 'highschool') {
       opponent = randFrom(HS_OPPONENTS);
@@ -781,7 +790,7 @@ function defaultState() {
       age: 15, overallRating: 0, offenseRating: 0, defenseRating: 0,
       morale: 80, fatigue: 0,
     },
-    season: { year: 1, week: 1, maxWeeks: 30, phase: 'highschool', schedule: [], nextGameIdx: 0 },
+    season: { year: 1, week: 1, maxWeeks: getMaxWeeks('highschool'), phase: 'highschool', schedule: [], nextGameIdx: 0 },
     highSchool: {
       school: null, seasonsPlayed: 0, maxSeasons: 4,
       recruitingInterest: { blueBlood: 0, midMajor: 0, small: 0 },
@@ -1058,6 +1067,10 @@ function enterGame() {
   if (G.player.motivation === undefined) G.player.motivation = 70;
   if (G.pro.relationships.teammate1 !== undefined) {
     G.pro.relationships = { coach: G.pro.relationships.coach||50, teammates: G.pro.relationships.teammate1||50, frontOffice: G.pro.relationships.frontOffice||50, fans: G.pro.relationships.fans||50 };
+  }
+  const correctMax = getMaxWeeks(G.phase);
+  if (G.season.maxWeeks !== correctMax) {
+    G.season.maxWeeks = correctMax;
   }
   computeRatings();
   document.getElementById('topbar-avatar').textContent = (G.player.firstName[0]||'')+(G.player.lastName[0]||'');
@@ -1503,7 +1516,9 @@ function renderDevelopmentPage(c) {
         <div style="display:flex;gap:8px;">
           ${seasonOver?`<button class="btn primary" onclick="endOfSeason()">End Season ▶</button>`
             :`<button class="btn primary" onclick="simWeek()">Sim Week ▶</button>
-              <button class="btn" onclick="simToNextGame()">Sim to Game ▶▶</button>`}
+              <button class="btn" onclick="simToNextGame()">Sim to Game ▶▶</button>
+              <button class="btn" onclick="simMultipleWeeks(5)">Sim 5 Wks</button>
+              <button class="btn" style="background:var(--accent-dim);color:var(--accent);" onclick="simRestOfSeason()">Sim Season ▶▶▶</button>`}
         </div>
       </div>
     </div>
@@ -1639,6 +1654,93 @@ function simToNextGame() {
     simWeekSilent();
   }
   simWeek();
+}
+
+function simWeekFullSilent() {
+  if(!G || G.season.week > G.season.maxWeeks) return;
+  const alloc = G._weekAlloc||[2,1,1,1,2];
+  const a = G.player.attributes, caps = G.player.potentialCaps;
+  const phase = G.phase;
+  const injured = (phase === 'pro' && G.pro.currentInjury) || (phase === 'college' && G._collegeInjury);
+  const currentInjury = phase === 'pro' ? G.pro.currentInjury : G._collegeInjury;
+  const devMul = phase==='highschool'?(HIGH_SCHOOLS.find(h=>h.id===G.highSchool.school)?.devBonus||1)
+    :phase==='college'?(COLLEGE_PROGRAMS.find(p=>p.id===G.college.school)?.coach.devBonus||1):0.7;
+  const mot=G.player.motivation||70, morale=G.player.morale||80, fatigue=G.player.fatigue||0;
+  const trainMod=(mot>=80?1.15:mot>=60?1.0:mot>=40?0.85:0.65)*(morale>=70?1.1:morale>=40?1.0:0.8)*(fatigue>=80?0.6:fatigue>=50?0.8:1.0);
+  const isDTD = injured && currentInjury && currentInjury.severity === 'day-to-day';
+  const offK=['closeShot','midRange','threePoint','freeThrow','layup','dunk','ballHandling','passing'];
+  const defK=['interiorDef','perimeterDef','rebounding','steal','block'];
+  const phyK=['speed','strength','stamina','vertical'];
+  if (injured && !isDTD) {
+    for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key;if(Math.random()<0.2*trainMod&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+1);}
+  } else {
+    if (!injured || isDTD) for(let s=0;s<alloc[0];s++){const k=randFrom(offK);if(Math.random()<0.55*trainMod&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+Math.round(devMul));}
+    for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key;if(Math.random()<0.25*trainMod&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+1);}
+    if (!injured) {
+      for(let s=0;s<alloc[2];s++){const k=randFrom(phyK);if(Math.random()<0.55*trainMod&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+Math.round(devMul));}
+      for(let s=0;s<alloc[3];s++){const k=randFrom(defK);if(Math.random()<0.55*trainMod&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+Math.round(devMul));}
+    }
+  }
+  const workSess=alloc[0]+alloc[1]+alloc[2]+alloc[3];
+  G.player.fatigue=clamp((G.player.fatigue||0)+(injured?-8:workSess*2-alloc[4]*5),0,100);
+  G.player.morale=clamp((G.player.morale||80)+alloc[4]*3-(G.player.fatigue>60?5:0)-(injured?3:0),20,100);
+  let motD=0; if(G.player.morale>=70)motD+=1; if(G.player.morale<=30)motD-=2; if(G.player.fatigue>=70)motD-=1; if(alloc[4]>=3)motD+=1;
+  G.player.motivation=clamp((G.player.motivation||70)+motD,0,100);
+  if (currentInjury) {
+    currentInjury.weeksLeft--;
+    if (currentInjury.weeksLeft <= 0) {
+      const sev = currentInjury.severity;
+      if (sev === 'moderate' || sev === 'severe') {
+        const pen = sev === 'severe' ? Math.round(currentInjury.penalty * 0.4) : Math.round(currentInjury.penalty * 0.2);
+        (currentInjury.attrs||[]).forEach(k => { a[k] = Math.max(25, (a[k]||25) - pen); });
+      }
+      if (phase === 'pro') G.pro.currentInjury = null;
+      else G._collegeInjury = null;
+    }
+  }
+  const sched = G.season.schedule;
+  const curInjured = (phase === 'pro' && G.pro.currentInjury) || (phase === 'college' && G._collegeInjury);
+  while(G.season.nextGameIdx < sched.length && sched[G.season.nextGameIdx].week <= G.season.week) {
+    const entry = sched[G.season.nextGameIdx];
+    if (curInjured) {
+      let teamOvr = 65;
+      if (phase === 'pro' && G.pro.roster.length > 0) teamOvr = G.pro.roster.reduce((s,t)=>s+t.ovr,0)/G.pro.roster.length;
+      else if (phase === 'college' && G.college.roster.length > 0) teamOvr = G.college.roster.reduce((s,t)=>s+t.ovr,0)/G.college.roster.length;
+      const ts = clamp(Math.round(55 + teamOvr*0.5 + randInt(-12,12)), 45, 120);
+      const os = clamp(Math.round(55 + entry.oppStrength*0.7 + randInt(-12,12)), 40, 125);
+      entry.played = true;
+      entry.result = { opponent: entry.opponent, pts:0, reb:0, ast:0, stl:0, blk:0, min:0, fgm:0, fga:0, tpm:0, tpa:0, ftm:0, fta:0, won: ts > os, teamScore: ts, oppScore: os, week: entry.week, dnp: true };
+      const rec = phase === 'pro' ? G.pro.record : phase === 'college' ? G.college.record : G.highSchool.record;
+      if (ts > os) rec.w++; else rec.l++;
+    } else {
+      const gr = simGame(entry);
+      entry.played = true;
+      entry.result = gr;
+      if (phase === 'pro') updateRelationships(gr);
+    }
+    G.season.nextGameIdx++;
+  }
+  if (phase === 'pro') checkMilestones([]);
+  G.season.week++;
+  computeRatings();
+}
+
+function simMultipleWeeks(n) {
+  if(!G || G.season.week > G.season.maxWeeks) return;
+  for (let i = 0; i < n - 1 && G.season.week <= G.season.maxWeeks; i++) {
+    simWeekFullSilent();
+  }
+  if (G.season.week <= G.season.maxWeeks) simWeek();
+  else { saveGame(false); renderDevelopmentPage(document.getElementById('main-content')); updateTopbar(); }
+}
+
+function simRestOfSeason() {
+  if(!G || G.season.week > G.season.maxWeeks) return;
+  while (G.season.week < G.season.maxWeeks) {
+    simWeekFullSilent();
+  }
+  if (G.season.week <= G.season.maxWeeks) simWeek();
+  else { saveGame(false); renderDevelopmentPage(document.getElementById('main-content')); updateTopbar(); }
 }
 
 function simWeekSilent() {
@@ -1835,6 +1937,7 @@ function endHSSeason() {
   } else {
     G.season.year++;
     G.season.week = 1;
+    G.season.maxWeeks = getMaxWeeks('highschool');
     G.season.nextGameIdx = 0;
     G.highSchool.currentSeasonStats = {gp:0,pts:0,reb:0,ast:0,stl:0,blk:0,min:0,fgm:0,fga:0,tpm:0,tpa:0,ftm:0,fta:0};
     G.highSchool.record = {w:0,l:0};
@@ -1940,6 +2043,7 @@ function confirmCollegeChoice() {
   G.college.gameLog = [];
   G.season.year = 1;
   G.season.week = 1;
+  G.season.maxWeeks = getMaxWeeks('college');
   G.season.nextGameIdx = 0;
   G.season.schedule = generateSchedule('college', offer.tier);
   selectedCollegeOffer = null;
@@ -2046,6 +2150,7 @@ function returnToCollege() {
   const prog = COLLEGE_PROGRAMS.find(p=>p.id===G.college.school);
   G.season.year++;
   G.season.week = 1;
+  G.season.maxWeeks = getMaxWeeks('college');
   G.season.nextGameIdx = 0;
   G.college.record = {w:0,l:0};
   G.college.currentSeasonStats = {gp:0,pts:0,reb:0,ast:0,stl:0,blk:0,min:0,fgm:0,fga:0,tpm:0,tpa:0,ftm:0,fta:0};
@@ -2537,7 +2642,7 @@ function beginProCareer() {
   G.pro.gameLog = [];
   G.season.year = 1;
   G.season.week = 1;
-  G.season.maxWeeks = 30;
+  G.season.maxWeeks = getMaxWeeks('pro');
   G.season.nextGameIdx = 0;
   G.season.schedule = generateProSchedule();
 
@@ -2558,8 +2663,9 @@ function generateProSchedule() {
   const schedule = [];
   const opponents = PRO_TEAMS.filter(t => t.id !== G.pro.team).map(t => t.name);
   const numGames = 82;
+  const gameSpan = 38;
   for (let i = 0; i < numGames; i++) {
-    const weekNum = Math.floor(i * 28 / numGames) + 1;
+    const weekNum = Math.floor(i * gameSpan / numGames) + 1;
     const opp = opponents[i % opponents.length];
     const oppStrength = randInt(55, 85);
     schedule.push({ week: weekNum, opponent: opp, oppStrength, isConf: false, played: false, result: null });
@@ -2678,6 +2784,7 @@ function startNextProSeason() {
   G.pro.prevOvr = G.player.overallRating;
   G.season.year++;
   G.season.week = 1;
+  G.season.maxWeeks = getMaxWeeks('pro');
   G.season.nextGameIdx = 0;
   G.pro.record = { w: 0, l: 0 };
   G.pro.currentSeasonStats = {gp:0,pts:0,reb:0,ast:0,stl:0,blk:0,min:0,fgm:0,fga:0,tpm:0,tpa:0,ftm:0,fta:0};
