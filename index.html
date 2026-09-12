@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Career Mode: Hardwood Legacy</title>
+<style>
+:root {
+  --bg-darkest: #0a0c0f;
+  --bg-dark: #0d0f12;
+  --bg-panel: #161a1f;
+  --bg-panel-hover: #1c2128;
+  --bg-input: #1e2229;
+  --border: #2a2f38;
+  --border-light: #363c47;
+  --text-primary: #e8eaed;
+  --text-secondary: #9aa0a8;
+  --text-muted: #6b7280;
+  --accent: #f97316;
+  --accent-hover: #fb923c;
+  --accent-dim: rgba(249,115,22,0.15);
+  --green: #22c55e;
+  --green-dim: rgba(34,197,94,0.15);
+  --yellow: #eab308;
+  --yellow-dim: rgba(234,179,8,0.15);
+  --red: #ef4444;
+  --red-dim: rgba(239,68,68,0.15);
+  --blue: #3b82f6;
+  --blue-dim: rgba(59,130,246,0.15);
+  --sidebar-width: 240px;
+  --topbar-height: 60px;
+  --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Consolas', 'Monaco', monospace;
+  --radius: 8px;
+  --radius-sm: 4px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: var(--font);
+  background: var(--bg-darkest);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+
+/* ─── TITLE SCREEN ─── */
+#title-screen {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at 50% 30%, #1a1400 0%, var(--bg-darkest) 70%);
+}
+.title-logo {
+  font-size: 48px; font-weight: 800; letter-spacing: -1px;
+  color: var(--accent); text-transform: uppercase;
+  text-shadow: 0 0 60px rgba(249,115,22,0.3);
+  margin-bottom: 4px;
+}
+.title-sub {
+  font-size: 16px; color: var(--text-secondary);
+  letter-spacing: 6px; text-transform: uppercase;
+  margin-bottom: 48px;
+}
+.title-menu { display: flex; flex-direction: column; gap: 12px; width: 280px; }
+.title-btn {
+  padding: 14px 24px; border: 1px solid var(--border);
+  background: var(--bg-panel); color: var(--text-primary);
+  font-size: 15px; font-weight: 600; border-radius: var(--radius);
+  cursor: pointer; transition: all 0.15s; text-align: center;
+  font-family: var(--font);
+}
+.title-btn:hover { border-color: var(--accent); background: var(--accent-dim); }
+.title-btn.primary { border-color: var(--accent); background: var(--accent); color: #000; }
+.title-btn.primary:hover { background: var(--accent-hover); }
+.title-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.title-slots { margin-top: 12px; }
+.save-slot {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; margin-bottom: 8px;
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: var(--radius); cursor: pointer; transition: all 0.15s;
+}
+.save-slot:hover { border-color: var(--accent); }
+.save-slot .slot-info { flex: 1; }
+.save-slot .slot-name { font-weight: 600; font-size: 14px; }
+.save-slot .slot-detail { font-size: 12px; color: var(--text-secondary); }
+.save-slot .slot-delete {
+  width: 28px; height: 28px; border: none; background: var(--red-dim);
+  color: var(--red); border-radius: 50%; cursor: pointer;
+  font-size: 14px; display: flex; align-items: center; justify-content: center;
+}
+.save-slot .slot-delete:hover { background: var(--red); color: #fff; }
+.title-version {
+  position: absolute; bottom: 16px;
+  font-size: 11px; color: var(--text-muted);
+}
+.title-import {
+  margin-top: 8px; font-size: 12px; color: var(--text-secondary);
+  cursor: pointer; text-decoration: underline;
+}
+.title-import:hover { color: var(--accent); }
+
+/* ─── LAYOUT SHELL ─── */
+#app { display: none; height: 100vh; }
+#app.active { display: flex; }
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-width); height: 100vh;
+  background: var(--bg-dark); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; flex-shrink: 0;
+  overflow-y: auto; overflow-x: hidden;
+}
+.sidebar-brand {
+  padding: 16px 18px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.sidebar-brand-icon {
+  width: 32px; height: 32px; background: var(--accent);
+  border-radius: 8px; display: flex; align-items: center;
+  justify-content: center; font-size: 16px; font-weight: 800; color: #000;
+}
+.sidebar-brand-text { font-size: 13px; font-weight: 700; letter-spacing: 0.5px; }
+.sidebar-section { padding: 16px 0 4px; }
+.sidebar-section-title {
+  padding: 0 18px 6px; font-size: 10px; font-weight: 700;
+  color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase;
+}
+.sidebar-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 18px; cursor: pointer; transition: all 0.12s;
+  color: var(--text-secondary); font-size: 13px; font-weight: 500;
+  border-left: 3px solid transparent;
+}
+.sidebar-item:hover { background: var(--bg-panel); color: var(--text-primary); }
+.sidebar-item.active {
+  background: var(--accent-dim); color: var(--accent);
+  border-left-color: var(--accent);
+}
+.sidebar-item .icon {
+  width: 18px; text-align: center; font-size: 14px; flex-shrink: 0;
+}
+.sidebar-spacer { flex: 1; }
+.sidebar-footer {
+  padding: 12px 18px; border-top: 1px solid var(--border);
+  font-size: 11px; color: var(--text-muted);
+}
+
+/* Top Bar */
+.topbar {
+  height: var(--topbar-height); background: var(--bg-dark);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; flex-shrink: 0;
+}
+.topbar-left { display: flex; flex-direction: column; }
+.topbar-title { font-size: 20px; font-weight: 700; }
+.topbar-date { font-size: 12px; color: var(--text-secondary); }
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.topbar-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--accent); display: flex; align-items: center;
+  justify-content: center; font-size: 14px; font-weight: 700; color: #000;
+  cursor: pointer;
+}
+.topbar-save-indicator {
+  font-size: 11px; color: var(--text-muted);
+  display: flex; align-items: center; gap: 4px;
+}
+.topbar-save-indicator .dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+}
+
+/* Main Content */
+.main-wrap {
+  flex: 1; display: flex; flex-direction: column;
+  min-width: 0; height: 100vh;
+}
+.main-content {
+  flex: 1; overflow-y: auto; padding: 24px;
+  background: var(--bg-darkest);
+}
+
+/* ─── SHARED COMPONENTS ─── */
+.card {
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px; margin-bottom: 16px;
+}
+.card-title {
+  font-size: 14px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; margin-bottom: 14px; color: var(--text-secondary);
+}
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+
+/* Rating Ring */
+.rating-ring {
+  width: 64px; height: 64px; position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.rating-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.rating-ring .value {
+  font-size: 20px; font-weight: 800; z-index: 1;
+}
+.rating-ring .label {
+  position: absolute; bottom: -16px; font-size: 9px;
+  font-weight: 700; letter-spacing: 0.5px; color: var(--text-muted);
+}
+.rating-ring.large { width: 80px; height: 80px; }
+.rating-ring.large .value { font-size: 26px; }
+.rating-ring.small { width: 44px; height: 44px; }
+.rating-ring.small .value { font-size: 14px; }
+
+/* Form elements */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block; font-size: 12px; font-weight: 600;
+  color: var(--text-secondary); margin-bottom: 6px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.form-input, .form-select {
+  width: 100%; padding: 10px 12px;
+  background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text-primary);
+  font-size: 14px; font-family: var(--font);
+  transition: border-color 0.15s;
+}
+.form-input:focus, .form-select:focus {
+  outline: none; border-color: var(--accent);
+}
+.form-select { cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239aa0a8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+  padding-right: 32px;
+}
+.form-row { display: flex; gap: 12px; }
+.form-row > * { flex: 1; }
+.form-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+/* Buttons */
+.btn {
+  padding: 10px 20px; border: 1px solid var(--border);
+  background: var(--bg-panel); color: var(--text-primary);
+  font-size: 13px; font-weight: 600; border-radius: var(--radius-sm);
+  cursor: pointer; transition: all 0.15s; font-family: var(--font);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:hover { border-color: var(--accent); background: var(--accent-dim); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #000; }
+.btn.primary:hover { background: var(--accent-hover); }
+.btn.danger { border-color: var(--red); color: var(--red); }
+.btn.danger:hover { background: var(--red-dim); }
+.btn-group { display: flex; gap: 8px; margin-top: 16px; }
+
+/* Tables */
+.stats-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.stats-table th {
+  text-align: left; padding: 8px 12px; font-size: 11px;
+  font-weight: 700; color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 0.5px; border-bottom: 1px solid var(--border);
+}
+.stats-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.stats-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+.stats-table tr:hover td { background: var(--accent-dim); }
+
+/* Attribute bar */
+.attr-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.attr-name { width: 120px; font-size: 12px; color: var(--text-secondary); }
+.attr-bar-wrap { flex: 1; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+.attr-bar { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.attr-val { width: 32px; text-align: right; font-size: 13px; font-weight: 700; }
+.attr-btn {
+  width: 22px; height: 22px; border: 1px solid var(--border);
+  background: var(--bg-input); color: var(--text-primary);
+  border-radius: 4px; cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font);
+}
+.attr-btn:hover { border-color: var(--accent); }
+.attr-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* Archetype cards */
+.archetype-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.archetype-card {
+  padding: 14px; background: var(--bg-input); border: 2px solid var(--border);
+  border-radius: var(--radius); cursor: pointer; text-align: center;
+  transition: all 0.15s;
+}
+.archetype-card:hover { border-color: var(--text-muted); }
+.archetype-card.selected { border-color: var(--accent); background: var(--accent-dim); }
+.archetype-card .arch-icon { font-size: 24px; margin-bottom: 6px; }
+.archetype-card .arch-name { font-size: 13px; font-weight: 700; }
+.archetype-card .arch-desc { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+/* Steps / Wizard */
+.wizard-steps {
+  display: flex; gap: 0; margin-bottom: 24px;
+  border-bottom: 2px solid var(--border);
+}
+.wizard-step {
+  padding: 10px 20px; font-size: 12px; font-weight: 600;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  cursor: default;
+}
+.wizard-step.active { color: var(--accent); border-bottom-color: var(--accent); }
+.wizard-step.done { color: var(--green); }
+
+/* HS selection card */
+.hs-option {
+  padding: 16px; background: var(--bg-input); border: 2px solid var(--border);
+  border-radius: var(--radius); cursor: pointer; transition: all 0.15s;
+  margin-bottom: 10px;
+}
+.hs-option:hover { border-color: var(--text-muted); }
+.hs-option.selected { border-color: var(--accent); background: var(--accent-dim); }
+.hs-option .hs-name { font-weight: 700; font-size: 15px; }
+.hs-option .hs-detail { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+/* Meters */
+.meter-wrap { margin-bottom: 12px; }
+.meter-label {
+  display: flex; justify-content: space-between; margin-bottom: 4px;
+  font-size: 12px;
+}
+.meter-label span:first-child { color: var(--text-secondary); }
+.meter-label span:last-child { font-weight: 600; }
+.meter-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
+.meter-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+
+/* Placeholder page */
+.placeholder-page {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; min-height: 400px; text-align: center;
+}
+.placeholder-page .ph-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
+.placeholder-page .ph-text { font-size: 16px; color: var(--text-muted); }
+.placeholder-page .ph-sub { font-size: 13px; color: var(--text-muted); margin-top: 8px; opacity: 0.6; }
+
+/* Toast */
+.toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; }
+.toast {
+  padding: 12px 20px; background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: var(--radius); margin-top: 8px;
+  font-size: 13px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  animation: slideIn 0.2s ease-out;
+  display: flex; align-items: center; gap: 8px;
+}
+.toast.success { border-color: var(--green); }
+.toast.error { border-color: var(--red); }
+@keyframes slideIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 5000;
+}
+.modal {
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 24px; max-width: 440px; width: 90%;
+}
+.modal-title { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+.modal-body { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; }
+
+/* Misc */
+.hidden { display: none !important; }
+.text-accent { color: var(--accent); }
+.text-green { color: var(--green); }
+.text-red { color: var(--red); }
+.text-yellow { color: var(--yellow); }
+.text-muted { color: var(--text-muted); }
+.text-sm { font-size: 12px; }
+.fw-700 { font-weight: 700; }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-16 { margin-bottom: 16px; }
+.gap-8 { gap: 8px; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.flex-1 { flex: 1; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.points-remaining {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; background: var(--accent-dim); border: 1px solid var(--accent);
+  border-radius: 20px; font-size: 13px; font-weight: 700; color: var(--accent);
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ TITLE SCREEN ═══ -->
+<div id="title-screen">
+  <div class="title-logo">Hardwood Legacy</div>
+  <div class="title-sub">Career Mode</div>
+  <div class="title-menu" id="title-menu">
+    <button class="title-btn primary" id="btn-new-career" onclick="startNewCareer()">New Career</button>
+    <div id="continue-slots"></div>
+    <div class="title-import" onclick="importSave()">Import Save File</div>
+  </div>
+  <div class="title-version">v0.1.0 &mdash; Pass 1</div>
+</div>
+
+<!-- ═══ CHARACTER CREATION ═══ -->
+<div id="creation-screen" class="hidden" style="position:fixed;inset:0;z-index:900;background:var(--bg-darkest);overflow-y:auto;">
+  <div style="max-width:700px;margin:0 auto;padding:32px 24px;">
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="font-size:24px;font-weight:800;color:var(--accent);">Create Your Player</div>
+      <div style="font-size:13px;color:var(--text-secondary);margin-top:4px;">Build the next legend of the hardwood</div>
+    </div>
+    <div class="wizard-steps" id="wizard-steps">
+      <div class="wizard-step active" data-step="1">1. Bio</div>
+      <div class="wizard-step" data-step="2">2. Physical</div>
+      <div class="wizard-step" data-step="3">3. Archetype</div>
+      <div class="wizard-step" data-step="4">4. Attributes</div>
+      <div class="wizard-step" data-step="5">5. High School</div>
+    </div>
+
+    <!-- Step 1: Bio -->
+    <div id="step-1" class="card">
+      <div class="card-title">Personal Info</div>
+      <div class="form-group">
+        <label class="form-label">First Name</label>
+        <input class="form-input" id="cr-first" placeholder="e.g. Marcus" maxlength="20">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Last Name</label>
+        <input class="form-input" id="cr-last" placeholder="e.g. Thompson" maxlength="20">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hometown</label>
+        <input class="form-input" id="cr-hometown" placeholder="e.g. Chicago, IL" maxlength="40">
+      </div>
+      <div class="btn-group" style="justify-content:flex-end;">
+        <button class="btn" onclick="goTitleScreen()">Cancel</button>
+        <button class="btn primary" onclick="creationNext(2)">Next</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Physical -->
+    <div id="step-2" class="card hidden">
+      <div class="card-title">Physical Profile</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Height (ft)</label>
+          <select class="form-select" id="cr-height-ft">
+            <option value="5">5'</option>
+            <option value="6" selected>6'</option>
+            <option value="7">7'</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Height (in)</label>
+          <select class="form-select" id="cr-height-in">
+            <option value="0">0"</option><option value="1">1"</option>
+            <option value="2">2"</option><option value="3" selected>3"</option>
+            <option value="4">4"</option><option value="5">5"</option>
+            <option value="6">6"</option><option value="7">7"</option>
+            <option value="8">8"</option><option value="9">9"</option>
+            <option value="10">10"</option><option value="11">11"</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Weight (lbs)</label>
+        <input class="form-input" id="cr-weight" type="number" min="140" max="320" value="195">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Position</label>
+        <select class="form-select" id="cr-position">
+          <option value="PG">Point Guard (PG)</option>
+          <option value="SG">Shooting Guard (SG)</option>
+          <option value="SF">Small Forward (SF)</option>
+          <option value="PF">Power Forward (PF)</option>
+          <option value="C">Center (C)</option>
+        </select>
+        <div class="form-hint" id="pos-hint">Recommended height: 6'0" - 6'4"</div>
+      </div>
+      <div class="btn-group" style="justify-content:flex-end;">
+        <button class="btn" onclick="creationNext(1)">Back</button>
+        <button class="btn primary" onclick="creationNext(3)">Next</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Archetype -->
+    <div id="step-3" class="card hidden">
+      <div class="card-title">Playing Style</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;">Choose your archetype. This determines your starting attributes and growth potential.</p>
+      <div class="archetype-grid" id="archetype-grid"></div>
+      <div class="btn-group" style="justify-content:flex-end;">
+        <button class="btn" onclick="creationNext(2)">Back</button>
+        <button class="btn primary" onclick="creationNext(4)">Next</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Attributes -->
+    <div id="step-4" class="card hidden">
+      <div class="card-title">Allocate Attribute Points</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <span style="font-size:13px;color:var(--text-secondary);">Fine-tune your player's starting ratings</span>
+        <div class="points-remaining">Points: <span id="points-left">0</span></div>
+      </div>
+      <div id="attr-list"></div>
+      <div class="btn-group" style="justify-content:flex-end;">
+        <button class="btn" onclick="creationNext(3)">Back</button>
+        <button class="btn primary" onclick="creationNext(5)">Next</button>
+      </div>
+    </div>
+
+    <!-- Step 5: High School -->
+    <div id="step-5" class="card hidden">
+      <div class="card-title">Choose Your High School</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;">Where you play affects your exposure and competition level.</p>
+      <div id="hs-options"></div>
+      <div class="btn-group" style="justify-content:flex-end;">
+        <button class="btn" onclick="creationNext(4)">Back</button>
+        <button class="btn primary" onclick="finishCreation()">Start Career</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MAIN APP ═══ -->
+<div id="app">
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">HL</div>
+      <div class="sidebar-brand-text">Hardwood Legacy</div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Career</div>
+      <div class="sidebar-item active" data-page="home" onclick="navigate('home')">
+        <span class="icon">&#9733;</span> Home / Office
+      </div>
+      <div class="sidebar-item" data-page="player" onclick="navigate('player')">
+        <span class="icon">&#9823;</span> My Player
+      </div>
+      <div class="sidebar-item" data-page="development" onclick="navigate('development')">
+        <span class="icon">&#9881;</span> Development
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Team</div>
+      <div class="sidebar-item" data-page="team" onclick="navigate('team')">
+        <span class="icon">&#9780;</span> Team
+      </div>
+      <div class="sidebar-item" data-page="schedule" onclick="navigate('schedule')">
+        <span class="icon">&#9776;</span> Schedule
+      </div>
+      <div class="sidebar-item" data-page="contracts" onclick="navigate('contracts')">
+        <span class="icon">&#9733;</span> Contracts
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Stats</div>
+      <div class="sidebar-item" data-page="stats" onclick="navigate('stats')">
+        <span class="icon">&#9776;</span> Stats
+      </div>
+      <div class="sidebar-item" data-page="awards" onclick="navigate('awards')">
+        <span class="icon">&#9734;</span> Awards
+      </div>
+      <div class="sidebar-item" data-page="transactions" onclick="navigate('transactions')">
+        <span class="icon">&#8644;</span> Transactions
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">More</div>
+      <div class="sidebar-item" data-page="relationships" onclick="navigate('relationships')">
+        <span class="icon">&#9825;</span> Relationships
+      </div>
+      <div class="sidebar-item" data-page="milestones" onclick="navigate('milestones')">
+        <span class="icon">&#10003;</span> Milestones
+      </div>
+      <div class="sidebar-item" data-page="settings" onclick="navigate('settings')">
+        <span class="icon">&#9881;</span> Settings
+      </div>
+      <div class="sidebar-item" data-page="saveload" onclick="navigate('saveload')">
+        <span class="icon">&#9776;</span> Save / Load
+      </div>
+    </div>
+
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-footer">
+      <div class="topbar-save-indicator">
+        <span class="dot"></span> <span id="sidebar-save-time">Auto-saved</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Area -->
+  <div class="main-wrap">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-title" id="page-title">Home</div>
+        <div class="topbar-date" id="topbar-date">Season 1 &mdash; Week 1</div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-save-indicator">
+          <span class="dot"></span> <span id="topbar-save-time"></span>
+        </div>
+        <div class="topbar-avatar" id="topbar-avatar">MT</div>
+      </div>
+    </div>
+    <div class="main-content" id="main-content">
+      <!-- Pages rendered here -->
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<input type="file" id="import-file" accept=".json" style="display:none" onchange="handleImport(event)">
+
+<script>
+// ═══════════════════════════════════════════════════
+// GAME ENGINE — Hardwood Legacy
+// ═══════════════════════════════════════════════════
+
+const SAVE_KEY_PREFIX = 'hardwood_legacy_v1_slot_';
+const MAX_SLOTS = 3;
+const VERSION = '0.1.0';
+
+// ─── DATA DEFINITIONS ───
+
+const POSITIONS = {
+  PG: { label: 'Point Guard', hintHeight: '6\'0" - 6\'4"', heightRange: [72, 76] },
+  SG: { label: 'Shooting Guard', hintHeight: '6\'2" - 6\'6"', heightRange: [74, 78] },
+  SF: { label: 'Small Forward', hintHeight: '6\'5" - 6\'9"', heightRange: [77, 81] },
+  PF: { label: 'Power Forward', hintHeight: '6\'7" - 6\'11"', heightRange: [79, 83] },
+  C:  { label: 'Center', hintHeight: '6\'9" - 7\'2"', heightRange: [81, 86] },
+};
+
+const ATTRIBUTES = [
+  { key: 'closeShot',   name: 'Close Shot',    category: 'offense' },
+  { key: 'midRange',    name: 'Mid-Range',     category: 'offense' },
+  { key: 'threePoint',  name: 'Three-Point',   category: 'offense' },
+  { key: 'freeThrow',   name: 'Free Throw',    category: 'offense' },
+  { key: 'layup',       name: 'Layup',         category: 'offense' },
+  { key: 'dunk',        name: 'Dunk',          category: 'offense' },
+  { key: 'ballHandling',name: 'Ball Handling',  category: 'offense' },
+  { key: 'passing',     name: 'Passing',       category: 'offense' },
+  { key: 'interiorDef', name: 'Interior Def',  category: 'defense' },
+  { key: 'perimeterDef',name: 'Perimeter Def', category: 'defense' },
+  { key: 'rebounding',  name: 'Rebounding',    category: 'defense' },
+  { key: 'steal',       name: 'Steal',         category: 'defense' },
+  { key: 'block',       name: 'Block',         category: 'defense' },
+  { key: 'speed',       name: 'Speed',         category: 'physical' },
+  { key: 'strength',    name: 'Strength',      category: 'physical' },
+  { key: 'stamina',     name: 'Stamina',       category: 'physical' },
+  { key: 'vertical',    name: 'Vertical',      category: 'physical' },
+];
+
+const ARCHETYPES = [
+  { id: 'sharpshooter', name: 'Sharpshooter', icon: '\u{1F3AF}', desc: 'Elite shooter, deadly from range',
+    boosts: { threePoint: 15, midRange: 12, freeThrow: 10, closeShot: 5, ballHandling: 3 },
+    potentialMod: 0 },
+  { id: 'slasher', name: 'Slasher', icon: '⚡', desc: 'Attacks the rim with speed and power',
+    boosts: { layup: 14, dunk: 12, speed: 10, closeShot: 8, ballHandling: 5 },
+    potentialMod: 0 },
+  { id: 'playmaker', name: 'Playmaker', icon: '\u{1F3C0}', desc: 'Court vision and ball handling maestro',
+    boosts: { passing: 15, ballHandling: 14, speed: 8, midRange: 5, perimeterDef: 3 },
+    potentialMod: 0 },
+  { id: 'rimProtector', name: 'Rim Protector', icon: '\u{1F6E1}', desc: 'Anchor the defense and protect the paint',
+    boosts: { block: 15, interiorDef: 14, rebounding: 10, strength: 8, closeShot: 3 },
+    potentialMod: -2 },
+  { id: 'threeAndD', name: '3-and-D', icon: '\u{1F512}', desc: 'Lock down defenders and shoot the three',
+    boosts: { perimeterDef: 14, threePoint: 12, steal: 8, stamina: 6, speed: 5 },
+    potentialMod: -1 },
+  { id: 'postScorer', name: 'Post Scorer', icon: '\u{1F4AA}', desc: 'Dominate the low post with skill and strength',
+    boosts: { closeShot: 14, strength: 12, rebounding: 10, interiorDef: 6, midRange: 5 },
+    potentialMod: -1 },
+];
+
+const HIGH_SCHOOLS = [
+  { id: 'powerhouse', name: 'Oak Hill Academy', type: 'National Powerhouse',
+    detail: 'Elite competition, maximum exposure, but harder to stand out. National schedule against top recruits.',
+    exposure: 1.3, difficulty: 1.4, devBonus: 0.9 },
+  { id: 'state', name: 'Lincoln High School', type: 'State Contender',
+    detail: 'Strong local competition with good regional exposure. Balanced schedule against quality opponents.',
+    exposure: 1.0, difficulty: 1.0, devBonus: 1.0 },
+  { id: 'underdog', name: 'Riverside Prep', type: 'Under-the-Radar',
+    detail: 'Less exposure but easier to dominate. More development time, fewer scouts watching.',
+    exposure: 0.7, difficulty: 0.7, devBonus: 1.2 },
+];
+
+// ─── GAME STATE ───
+
+let G = null; // current game state
+let currentSlot = null;
+let currentPage = 'home';
+
+function defaultState() {
+  return {
+    version: VERSION,
+    createdAt: Date.now(),
+    lastSaved: Date.now(),
+    phase: 'highschool', // highschool | college | draft | pro | retired
+    player: {
+      firstName: '', lastName: '', hometown: '',
+      heightFt: 6, heightIn: 3, weight: 195,
+      position: 'PG', archetype: 'sharpshooter',
+      attributes: {},
+      potential: 0, // 1-5 stars
+      potentialCaps: {},
+      age: 15,
+      overallRating: 0,
+      offenseRating: 0,
+      defenseRating: 0,
+    },
+    season: {
+      year: 1,
+      week: 1,
+      maxWeeks: 30,
+      phase: 'highschool',
+    },
+    highSchool: {
+      school: null,
+      seasonsPlayed: 0,
+      maxSeasons: 4,
+      recruitingInterest: { blueBlood: 0, midMajor: 0, small: 0 },
+      seasonLog: [],
+      gameLog: [],
+    },
+    college: {
+      school: null,
+      seasonsPlayed: 0,
+      role: 'bench',
+      coachTrust: 50,
+      draftStock: 0,
+      seasonLog: [],
+      gameLog: [],
+    },
+    pro: {
+      team: null,
+      seasonsPlayed: 0,
+      contract: null,
+      role: 'bench',
+      relationships: { coach: 50, teammate1: 50, teammate2: 50, frontOffice: 50, fans: 50 },
+      injuries: [],
+      tradeHistory: [],
+      seasonLog: [],
+      gameLog: [],
+    },
+    career: {
+      stats: [],
+      awards: [],
+      milestones: [],
+      totalGames: 0,
+      totalPoints: 0,
+      totalRebounds: 0,
+      totalAssists: 0,
+    },
+    settings: {
+      simSpeed: 'normal',
+      difficulty: 'normal',
+    },
+  };
+}
+
+// ─── SAVE / LOAD SYSTEM ───
+
+function saveGame(showToast = true) {
+  if (!G || currentSlot === null) return false;
+  try {
+    G.lastSaved = Date.now();
+    const data = JSON.stringify(G);
+    localStorage.setItem(SAVE_KEY_PREFIX + currentSlot, data);
+    updateSaveTimestamp();
+    if (showToast) toast('Game saved', 'success');
+    return true;
+  } catch (e) {
+    toast('Save failed: ' + e.message + '. Use Export as backup.', 'error');
+    return false;
+  }
+}
+
+function loadGame(slot) {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY_PREFIX + slot);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    return data;
+  } catch (e) {
+    toast('Failed to load save: ' + e.message, 'error');
+    return null;
+  }
+}
+
+function deleteSave(slot) {
+  try {
+    localStorage.removeItem(SAVE_KEY_PREFIX + slot);
+  } catch (e) {
+    // ignored
+  }
+}
+
+function getAllSlots() {
+  const slots = [];
+  for (let i = 0; i < MAX_SLOTS; i++) {
+    const data = loadGame(i);
+    slots.push(data ? { slot: i, data } : { slot: i, data: null });
+  }
+  return slots;
+}
+
+function getFirstEmptySlot() {
+  for (let i = 0; i < MAX_SLOTS; i++) {
+    if (!loadGame(i)) return i;
+  }
+  return null;
+}
+
+function exportSave() {
+  if (!G) return;
+  const blob = new Blob([JSON.stringify(G, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `hardwood_legacy_${G.player.firstName}_${G.player.lastName}_${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Save exported', 'success');
+}
+
+function importSave() {
+  document.getElementById('import-file').click();
+}
+
+function handleImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.player || !data.version) {
+        toast('Invalid save file', 'error');
+        return;
+      }
+      const slot = getFirstEmptySlot();
+      if (slot === null) {
+        toast('All save slots full. Delete one first.', 'error');
+        return;
+      }
+      currentSlot = slot;
+      G = data;
+      saveGame(false);
+      toast('Save imported to slot ' + (slot + 1), 'success');
+      enterGame();
+    } catch (err) {
+      toast('Failed to import: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function updateSaveTimestamp() {
+  const ts = G ? formatTimestamp(G.lastSaved) : '';
+  const el1 = document.getElementById('topbar-save-time');
+  const el2 = document.getElementById('sidebar-save-time');
+  if (el1) el1.textContent = ts;
+  if (el2) el2.textContent = 'Saved ' + ts;
+}
+
+function formatTimestamp(ms) {
+  const d = new Date(ms);
+  const h = d.getHours(), m = d.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  return `${((h % 12) || 12)}:${m.toString().padStart(2,'0')} ${ampm}`;
+}
+
+// ─── TOAST ───
+
+function toast(msg, type = 'info') {
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ─── TITLE SCREEN ───
+
+function showTitleScreen() {
+  document.getElementById('title-screen').classList.remove('hidden');
+  document.getElementById('creation-screen').classList.add('hidden');
+  document.getElementById('app').classList.remove('active');
+  renderSaveSlots();
+}
+
+function renderSaveSlots() {
+  const container = document.getElementById('continue-slots');
+  const slots = getAllSlots();
+  const hasAnySave = slots.some(s => s.data);
+  let html = '';
+  if (hasAnySave) {
+    html += '<div class="title-slots">';
+    slots.forEach(s => {
+      if (s.data) {
+        const p = s.data.player;
+        const phase = s.data.phase || 'highschool';
+        const phaseLabel = { highschool: 'High School', college: 'College', draft: 'Draft', pro: 'Pro', retired: 'Retired' }[phase] || phase;
+        html += `<div class="save-slot" onclick="continueGame(${s.slot})">
+          <div class="slot-info">
+            <div class="slot-name">${esc(p.firstName)} ${esc(p.lastName)}</div>
+            <div class="slot-detail">${esc(p.position)} &middot; ${phaseLabel} &middot; Season ${s.data.season?.year || 1}</div>
+            <div class="slot-detail">Saved ${formatTimestamp(s.data.lastSaved)}</div>
+          </div>
+          <button class="slot-delete" onclick="event.stopPropagation();confirmDeleteSlot(${s.slot})" title="Delete">&times;</button>
+        </div>`;
+      }
+    });
+    html += '</div>';
+  }
+  container.innerHTML = html;
+}
+
+function confirmDeleteSlot(slot) {
+  if (confirm('Delete this save? This cannot be undone.')) {
+    deleteSave(slot);
+    renderSaveSlots();
+    toast('Save deleted', 'success');
+  }
+}
+
+function continueGame(slot) {
+  const data = loadGame(slot);
+  if (!data) { toast('Save not found', 'error'); return; }
+  G = data;
+  currentSlot = slot;
+  enterGame();
+}
+
+function startNewCareer() {
+  const slot = getFirstEmptySlot();
+  if (slot === null) {
+    toast('All save slots full. Delete one first.', 'error');
+    return;
+  }
+  currentSlot = slot;
+  showCreationScreen();
+}
+
+function goTitleScreen() {
+  showTitleScreen();
+}
+
+// ─── CHARACTER CREATION ───
+
+let creationStep = 1;
+let selectedArchetype = null;
+let selectedHS = null;
+let attrPoints = 15;
+let tempAttrs = {};
+
+function showCreationScreen() {
+  document.getElementById('title-screen').classList.add('hidden');
+  document.getElementById('creation-screen').classList.remove('hidden');
+  document.getElementById('app').classList.remove('active');
+
+  creationStep = 1;
+  selectedArchetype = null;
+  selectedHS = null;
+  attrPoints = 15;
+  tempAttrs = {};
+
+  ATTRIBUTES.forEach(a => { tempAttrs[a.key] = 25; });
+
+  renderArchetypeGrid();
+  renderHSOptions();
+  updateCreationStep();
+  setupPositionHint();
+}
+
+function setupPositionHint() {
+  const sel = document.getElementById('cr-position');
+  const hint = document.getElementById('pos-hint');
+  sel.onchange = () => {
+    hint.textContent = 'Recommended height: ' + POSITIONS[sel.value].hintHeight;
+  };
+}
+
+function creationNext(step) {
+  if (step > creationStep) {
+    if (!validateStep(creationStep)) return;
+  }
+  creationStep = step;
+  updateCreationStep();
+}
+
+function validateStep(step) {
+  if (step === 1) {
+    const first = document.getElementById('cr-first').value.trim();
+    const last = document.getElementById('cr-last').value.trim();
+    if (!first || !last) { toast('Enter first and last name', 'error'); return false; }
+  }
+  if (step === 3 && !selectedArchetype) {
+    toast('Select an archetype', 'error'); return false;
+  }
+  return true;
+}
+
+function updateCreationStep() {
+  for (let i = 1; i <= 5; i++) {
+    document.getElementById('step-' + i).classList.toggle('hidden', i !== creationStep);
+  }
+  document.querySelectorAll('.wizard-step').forEach(el => {
+    const s = parseInt(el.dataset.step);
+    el.classList.toggle('active', s === creationStep);
+    el.classList.toggle('done', s < creationStep);
+  });
+  if (creationStep === 4) {
+    applyArchetypeToAttrs();
+    renderAttrList();
+  }
+}
+
+function renderArchetypeGrid() {
+  const grid = document.getElementById('archetype-grid');
+  grid.innerHTML = ARCHETYPES.map(a => `
+    <div class="archetype-card ${selectedArchetype === a.id ? 'selected' : ''}"
+         onclick="selectArchetype('${a.id}')">
+      <div class="arch-icon">${a.icon}</div>
+      <div class="arch-name">${a.name}</div>
+      <div class="arch-desc">${a.desc}</div>
+    </div>
+  `).join('');
+}
+
+function selectArchetype(id) {
+  selectedArchetype = id;
+  renderArchetypeGrid();
+}
+
+function applyArchetypeToAttrs() {
+  const arch = ARCHETYPES.find(a => a.id === selectedArchetype);
+  if (!arch) return;
+  ATTRIBUTES.forEach(a => { tempAttrs[a.key] = 25; });
+  for (const [key, val] of Object.entries(arch.boosts)) {
+    tempAttrs[key] = 25 + val;
+  }
+  attrPoints = 15;
+}
+
+function renderAttrList() {
+  const container = document.getElementById('attr-list');
+  let html = '';
+  let currentCat = '';
+  ATTRIBUTES.forEach(attr => {
+    if (attr.category !== currentCat) {
+      currentCat = attr.category;
+      const catLabel = { offense: 'Offense', defense: 'Defense', physical: 'Physical' }[currentCat];
+      html += `<div style="margin-top:12px;margin-bottom:6px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">${catLabel}</div>`;
+    }
+    const val = tempAttrs[attr.key];
+    const color = val >= 70 ? 'var(--green)' : val >= 50 ? 'var(--yellow)' : val >= 35 ? 'var(--accent)' : 'var(--red)';
+    html += `<div class="attr-row">
+      <span class="attr-name">${attr.name}</span>
+      <div class="attr-bar-wrap"><div class="attr-bar" style="width:${val}%;background:${color};"></div></div>
+      <span class="attr-val" style="color:${color}">${val}</span>
+      <button class="attr-btn" onclick="adjustAttr('${attr.key}',-1)" ${val <= 25 ? 'disabled' : ''}>-</button>
+      <button class="attr-btn" onclick="adjustAttr('${attr.key}',1)" ${attrPoints <= 0 || val >= 80 ? 'disabled' : ''}>+</button>
+    </div>`;
+  });
+  container.innerHTML = html;
+  document.getElementById('points-left').textContent = attrPoints;
+}
+
+function adjustAttr(key, delta) {
+  const arch = ARCHETYPES.find(a => a.id === selectedArchetype);
+  const baseVal = 25 + (arch?.boosts[key] || 0);
+  const current = tempAttrs[key];
+  if (delta > 0 && attrPoints <= 0) return;
+  if (delta > 0 && current >= 80) return;
+  if (delta < 0 && current <= baseVal) return;
+  tempAttrs[key] += delta;
+  attrPoints -= delta;
+  renderAttrList();
+}
+
+function renderHSOptions() {
+  const container = document.getElementById('hs-options');
+  container.innerHTML = HIGH_SCHOOLS.map(hs => `
+    <div class="hs-option ${selectedHS === hs.id ? 'selected' : ''}"
+         onclick="selectHS('${hs.id}')">
+      <div class="hs-name">${hs.name}</div>
+      <div style="font-size:12px;color:var(--accent);font-weight:600;margin-top:2px;">${hs.type}</div>
+      <div class="hs-detail">${hs.detail}</div>
+    </div>
+  `).join('');
+}
+
+function selectHS(id) {
+  selectedHS = id;
+  renderHSOptions();
+}
+
+function finishCreation() {
+  if (!selectedHS) { toast('Choose a high school', 'error'); return; }
+
+  G = defaultState();
+  const p = G.player;
+  p.firstName = document.getElementById('cr-first').value.trim();
+  p.lastName = document.getElementById('cr-last').value.trim();
+  p.hometown = document.getElementById('cr-hometown').value.trim() || 'Unknown';
+  p.heightFt = parseInt(document.getElementById('cr-height-ft').value);
+  p.heightIn = parseInt(document.getElementById('cr-height-in').value);
+  p.weight = parseInt(document.getElementById('cr-weight').value) || 195;
+  p.position = document.getElementById('cr-position').value;
+  p.archetype = selectedArchetype;
+  p.attributes = { ...tempAttrs };
+
+  // Potential: 2-5 stars, slightly random, influenced by archetype
+  const arch = ARCHETYPES.find(a => a.id === selectedArchetype);
+  const basePot = 3 + Math.floor(Math.random() * 2); // 3-4
+  p.potential = Math.max(1, Math.min(5, basePot + (arch?.potentialMod || 0) + (Math.random() < 0.3 ? 1 : 0)));
+
+  // Potential caps per attribute (potential * 18-20ish)
+  ATTRIBUTES.forEach(attr => {
+    const variance = Math.floor(Math.random() * 6) - 2; // -2 to +3
+    p.potentialCaps[attr.key] = Math.min(99, p.potential * 18 + variance);
+  });
+
+  G.highSchool.school = selectedHS;
+  computeRatings();
+  saveGame(false);
+  enterGame();
+  toast('Career started! Welcome to ' + HIGH_SCHOOLS.find(h => h.id === selectedHS).name, 'success');
+}
+
+// ─── COMPUTED RATINGS ───
+
+function computeRatings() {
+  if (!G) return;
+  const a = G.player.attributes;
+  const offKeys = ATTRIBUTES.filter(x => x.category === 'offense').map(x => x.key);
+  const defKeys = ATTRIBUTES.filter(x => x.category === 'defense').map(x => x.key);
+  const physKeys = ATTRIBUTES.filter(x => x.category === 'physical').map(x => x.key);
+
+  const avg = (keys) => Math.round(keys.reduce((s, k) => s + (a[k] || 25), 0) / keys.length);
+  G.player.offenseRating = avg(offKeys);
+  G.player.defenseRating = avg(defKeys);
+  const physAvg = avg(physKeys);
+  G.player.overallRating = Math.round((G.player.offenseRating * 0.4 + G.player.defenseRating * 0.3 + physAvg * 0.3));
+}
+
+// ─── ENTER GAME ───
+
+function enterGame() {
+  document.getElementById('title-screen').classList.add('hidden');
+  document.getElementById('creation-screen').classList.add('hidden');
+  document.getElementById('app').classList.add('active');
+
+  computeRatings();
+  const p = G.player;
+  document.getElementById('topbar-avatar').textContent = (p.firstName[0] || '') + (p.lastName[0] || '');
+  updateTopbar();
+  updateSaveTimestamp();
+  navigate('home');
+}
+
+function updateTopbar() {
+  if (!G) return;
+  const phaseLabels = { highschool: 'High School', college: 'College', draft: 'Draft', pro: 'Pro', retired: 'Retired' };
+  document.getElementById('topbar-date').textContent =
+    `${phaseLabels[G.phase] || G.phase} — Season ${G.season.year}, Week ${G.season.week}`;
+}
+
+// ─── NAVIGATION ───
+
+function navigate(page) {
+  currentPage = page;
+  document.querySelectorAll('.sidebar-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.page === page);
+  });
+  const titles = {
+    home: 'Home / Office', player: 'My Player', development: 'Development',
+    team: 'Team', schedule: 'Schedule', contracts: 'Contracts',
+    stats: 'Stats', awards: 'Awards & Honors', transactions: 'Transactions',
+    relationships: 'Relationships', milestones: 'Milestones',
+    settings: 'Settings', saveload: 'Save / Load',
+  };
+  document.getElementById('page-title').textContent = titles[page] || page;
+  renderPage(page);
+}
+
+function renderPage(page) {
+  const c = document.getElementById('main-content');
+  const renderers = {
+    home: renderHomePage,
+    player: renderPlayerPage,
+    development: renderDevelopmentPage,
+    saveload: renderSaveLoadPage,
+    settings: renderSettingsPage,
+  };
+  if (renderers[page]) {
+    renderers[page](c);
+  } else {
+    renderPlaceholder(c, page);
+  }
+}
+
+// ─── PLACEHOLDER PAGE ───
+
+function renderPlaceholder(container, page) {
+  const icons = {
+    team: '\u{1F3C0}', schedule: '\u{1F4C5}', contracts: '\u{1F4B0}',
+    stats: '\u{1F4CA}', awards: '\u{1F3C6}', transactions: '\u{1F504}',
+    relationships: '\u{1F91D}', milestones: '\u{1F3AF}',
+  };
+  container.innerHTML = `
+    <div class="placeholder-page">
+      <div class="ph-icon">${icons[page] || '\u{1F6A7}'}</div>
+      <div class="ph-text">Coming Soon</div>
+      <div class="ph-sub">This feature will be available in a future update</div>
+    </div>`;
+}
+
+// ─── HOME PAGE ───
+
+function renderHomePage(c) {
+  const p = G.player;
+  const phaseLabels = { highschool: 'High School', college: 'College', draft: 'Draft', pro: 'Pro', retired: 'Retired' };
+  const hsName = G.highSchool.school ? HIGH_SCHOOLS.find(h => h.id === G.highSchool.school)?.name || '' : '';
+
+  c.innerHTML = `
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-title">Player Overview</div>
+        <div style="display:flex;align-items:center;gap:20px;">
+          <div style="width:72px;height:72px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#000;">
+            ${p.firstName[0]}${p.lastName[0]}
+          </div>
+          <div>
+            <div style="font-size:22px;font-weight:800;">${esc(p.firstName)} ${esc(p.lastName)}</div>
+            <div style="font-size:13px;color:var(--text-secondary);">${POSITIONS[p.position]?.label || p.position} &middot; ${p.heightFt}'${p.heightIn}" &middot; ${p.weight} lbs</div>
+            <div style="font-size:13px;color:var(--text-secondary);">${esc(p.hometown)} &middot; Age ${p.age}</div>
+            <div style="font-size:12px;color:var(--accent);font-weight:600;margin-top:4px;">${ARCHETYPES.find(a => a.id === p.archetype)?.name || ''}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:24px;margin-top:20px;justify-content:center;">
+          ${ratingRingHTML(p.overallRating, 'OVR')}
+          ${ratingRingHTML(p.offenseRating, 'OFF')}
+          ${ratingRingHTML(p.defenseRating, 'DEF')}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Career Status</div>
+        <div class="meter-wrap">
+          <div class="meter-label"><span>Phase</span><span>${phaseLabels[G.phase]}</span></div>
+        </div>
+        <div class="meter-wrap">
+          <div class="meter-label"><span>Season</span><span>${G.season.year}</span></div>
+        </div>
+        <div class="meter-wrap">
+          <div class="meter-label"><span>Week</span><span>${G.season.week} / ${G.season.maxWeeks}</span></div>
+        </div>
+        ${hsName ? `<div class="meter-wrap"><div class="meter-label"><span>School</span><span>${esc(hsName)}</span></div></div>` : ''}
+        <div class="meter-wrap">
+          <div class="meter-label"><span>Potential</span><span>${'★'.repeat(p.potential)}${'☆'.repeat(5 - p.potential)}</span></div>
+        </div>
+        <div style="margin-top:16px;">
+          <button class="btn primary" onclick="navigate('development')" style="width:100%;">
+            Go to Development →
+          </button>
+        </div>
+      </div>
+    </div>
+
+    ${G.phase === 'highschool' ? `
+    <div class="card">
+      <div class="card-title">Recruiting Interest</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+        ${recruitMeter('Blue Blood Programs', G.highSchool.recruitingInterest.blueBlood)}
+        ${recruitMeter('Mid-Major Programs', G.highSchool.recruitingInterest.midMajor)}
+        ${recruitMeter('Small Programs', G.highSchool.recruitingInterest.small)}
+      </div>
+    </div>` : ''}
+  `;
+}
+
+function recruitMeter(label, value) {
+  const color = value >= 70 ? 'var(--green)' : value >= 40 ? 'var(--yellow)' : 'var(--text-muted)';
+  return `<div>
+    <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;">${label}</div>
+    <div class="meter-bar"><div class="meter-fill" style="width:${value}%;background:${color};"></div></div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${value}%</div>
+  </div>`;
+}
+
+// ─── PLAYER PAGE ───
+
+function renderPlayerPage(c) {
+  const p = G.player;
+  let html = `
+    <div class="card">
+      <div class="card-title">Physical Profile & Ratings</div>
+      <div style="display:flex;gap:32px;align-items:center;flex-wrap:wrap;">
+        <div style="display:flex;gap:20px;">
+          ${ratingRingHTML(p.overallRating, 'OVR', 'large')}
+          ${ratingRingHTML(p.offenseRating, 'OFF', 'large')}
+          ${ratingRingHTML(p.defenseRating, 'DEF', 'large')}
+        </div>
+        <div style="flex:1;min-width:200px;">
+          <div style="font-size:22px;font-weight:800;">${esc(p.firstName)} ${esc(p.lastName)}</div>
+          <div style="color:var(--text-secondary);font-size:13px;">
+            ${POSITIONS[p.position]?.label} &middot; ${p.heightFt}'${p.heightIn}" &middot; ${p.weight} lbs<br>
+            ${esc(p.hometown)} &middot; Age ${p.age}<br>
+            Archetype: ${ARCHETYPES.find(a => a.id === p.archetype)?.name || ''}<br>
+            Potential: ${'★'.repeat(p.potential)}${'☆'.repeat(5 - p.potential)}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Attributes</div>`;
+
+  let currentCat = '';
+  ATTRIBUTES.forEach(attr => {
+    if (attr.category !== currentCat) {
+      currentCat = attr.category;
+      const catLabel = { offense: 'Offense', defense: 'Defense', physical: 'Physical' }[currentCat];
+      html += `<div style="margin-top:14px;margin-bottom:6px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">${catLabel}</div>`;
+    }
+    const val = p.attributes[attr.key] || 25;
+    const cap = p.potentialCaps[attr.key] || 99;
+    const color = val >= 70 ? 'var(--green)' : val >= 50 ? 'var(--yellow)' : val >= 35 ? 'var(--accent)' : 'var(--red)';
+    html += `<div class="attr-row">
+      <span class="attr-name">${attr.name}</span>
+      <div class="attr-bar-wrap">
+        <div class="attr-bar" style="width:${val}%;background:${color};"></div>
+        <div style="position:absolute;left:${cap}%;top:0;width:1px;height:100%;background:var(--text-muted);opacity:0.5;" title="Potential cap: ${cap}"></div>
+      </div>
+      <span class="attr-val" style="color:${color}">${val}</span>
+    </div>`;
+  });
+  html += '</div>';
+  c.innerHTML = html;
+}
+
+// ─── DEVELOPMENT PAGE ───
+
+function renderDevelopmentPage(c) {
+  const allocations = ['Practice', 'Film Study', 'Strength & Conditioning', 'Social / Rest'];
+  const allocIcons = ['\u{1F3C0}', '\u{1F4FA}', '\u{1F4AA}', '\u{1F6CC}'];
+  const allocDescs = [
+    'Improve shooting, ball handling, and skill attributes',
+    'Boost basketball IQ and decision-making (boosts all attributes slightly)',
+    'Build speed, strength, stamina, and vertical',
+    'Recover stamina, prevent burnout, boost morale',
+  ];
+
+  if (!G._weekAlloc) {
+    G._weekAlloc = [3, 1, 1, 2]; // hours per area (total ~7 "sessions")
+  }
+  const alloc = G._weekAlloc;
+  const total = alloc.reduce((s, v) => s + v, 0);
+
+  c.innerHTML = `
+    <div class="card">
+      <div class="card-title">Weekly Training Plan</div>
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
+        Allocate your training sessions for this week. Total sessions: <strong>${total}</strong> / 7
+      </div>
+      ${allocations.map((name, i) => `
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
+          <span style="font-size:20px;width:32px;text-align:center;">${allocIcons[i]}</span>
+          <div style="flex:1;">
+            <div style="font-weight:600;font-size:14px;">${name}</div>
+            <div style="font-size:11px;color:var(--text-muted);">${allocDescs[i]}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="attr-btn" onclick="adjustAlloc(${i},-1)" ${alloc[i] <= 0 ? 'disabled' : ''}>-</button>
+            <span style="font-size:18px;font-weight:700;width:28px;text-align:center;">${alloc[i]}</span>
+            <button class="attr-btn" onclick="adjustAlloc(${i},1)" ${total >= 7 ? 'disabled' : ''}>+</button>
+          </div>
+        </div>
+      `).join('')}
+      <div class="btn-group" style="justify-content:flex-end;">
+        <button class="btn primary" onclick="simWeek()" ${G.season.week > G.season.maxWeeks ? 'disabled' : ''}>
+          Sim Week ▶
+        </button>
+      </div>
+    </div>
+
+    <div class="card" id="week-results" style="display:none;">
+      <div class="card-title">Week Results</div>
+      <div id="week-results-content"></div>
+    </div>
+  `;
+}
+
+function adjustAlloc(idx, delta) {
+  if (!G._weekAlloc) G._weekAlloc = [3, 1, 1, 2];
+  const alloc = G._weekAlloc;
+  const total = alloc.reduce((s, v) => s + v, 0);
+  if (delta > 0 && total >= 7) return;
+  if (delta < 0 && alloc[idx] <= 0) return;
+  alloc[idx] += delta;
+  renderDevelopmentPage(document.getElementById('main-content'));
+}
+
+function simWeek() {
+  if (!G) return;
+  const alloc = G._weekAlloc || [3, 1, 1, 2];
+  const results = [];
+  const a = G.player.attributes;
+  const caps = G.player.potentialCaps;
+  const hs = HIGH_SCHOOLS.find(h => h.id === G.highSchool.school);
+  const devMul = hs?.devBonus || 1.0;
+
+  // Practice: offense skills
+  const offenseKeys = ['closeShot','midRange','threePoint','freeThrow','layup','dunk','ballHandling','passing'];
+  for (let s = 0; s < alloc[0]; s++) {
+    const key = offenseKeys[Math.floor(Math.random() * offenseKeys.length)];
+    const gain = Math.random() < 0.6 ? 1 : 0;
+    if (gain && a[key] < caps[key]) {
+      a[key] = Math.min(caps[key], a[key] + Math.round(1 * devMul));
+      results.push(`${ATTRIBUTES.find(x=>x.key===key).name} +1`);
+    }
+  }
+
+  // Film Study: all attrs get a tiny chance
+  for (let s = 0; s < alloc[1]; s++) {
+    const key = ATTRIBUTES[Math.floor(Math.random() * ATTRIBUTES.length)].key;
+    if (Math.random() < 0.3 && a[key] < caps[key]) {
+      a[key] = Math.min(caps[key], a[key] + 1);
+      results.push(`${ATTRIBUTES.find(x=>x.key===key).name} +1 (IQ)`);
+    }
+  }
+
+  // Strength & Conditioning: physical attrs
+  const physKeys = ['speed','strength','stamina','vertical'];
+  for (let s = 0; s < alloc[2]; s++) {
+    const key = physKeys[Math.floor(Math.random() * physKeys.length)];
+    const gain = Math.random() < 0.6 ? 1 : 0;
+    if (gain && a[key] < caps[key]) {
+      a[key] = Math.min(caps[key], a[key] + Math.round(1 * devMul));
+      results.push(`${ATTRIBUTES.find(x=>x.key===key).name} +1`);
+    }
+  }
+
+  // Social/Rest: stamina recovery, morale
+  if (alloc[3] >= 2) {
+    results.push('Well-rested: stamina maintained');
+  }
+
+  // Sim a game if in-season (every 3 weeks roughly)
+  let gameResult = null;
+  if (G.season.week % 3 === 0) {
+    gameResult = simGame();
+    results.push(`Game: ${gameResult.summary}`);
+  }
+
+  G.season.week++;
+  computeRatings();
+
+  // Check end of season
+  if (G.season.week > G.season.maxWeeks) {
+    results.push('\u{1F3C6} Season complete!');
+    if (G.phase === 'highschool') {
+      G.highSchool.seasonsPlayed++;
+    }
+  }
+
+  saveGame(false);
+
+  // Show results
+  const resultsEl = document.getElementById('week-results');
+  const contentEl = document.getElementById('week-results-content');
+  if (resultsEl && contentEl) {
+    resultsEl.style.display = 'block';
+    contentEl.innerHTML = `
+      <ul style="list-style:none;padding:0;">
+        ${results.map(r => `<li style="padding:4px 0;font-size:13px;color:var(--text-secondary);">• ${esc(r)}</li>`).join('')}
+      </ul>
+      ${gameResult ? `
+      <div style="margin-top:12px;padding:12px;background:var(--bg-input);border-radius:var(--radius-sm);">
+        <div style="font-weight:700;margin-bottom:6px;">Box Score</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:13px;">
+          <div><span class="text-muted">PTS</span><br><strong>${gameResult.pts}</strong></div>
+          <div><span class="text-muted">REB</span><br><strong>${gameResult.reb}</strong></div>
+          <div><span class="text-muted">AST</span><br><strong>${gameResult.ast}</strong></div>
+          <div><span class="text-muted">STL</span><br><strong>${gameResult.stl}</strong></div>
+        </div>
+      </div>` : ''}
+      ${G.season.week > G.season.maxWeeks ? `
+        <div style="margin-top:12px;">
+          <button class="btn primary" onclick="advanceSeason()">Advance to Next Season ▶</button>
+        </div>` : ''}
+    `;
+  }
+
+  updateTopbar();
+}
+
+function simGame() {
+  const a = G.player.attributes;
+  const off = G.player.offenseRating;
+  const def = G.player.defenseRating;
+  const hs = HIGH_SCHOOLS.find(h => h.id === G.highSchool.school);
+  const diff = hs?.difficulty || 1.0;
+
+  const pts = Math.max(0, Math.round((off * 0.35 + Math.random() * 15 - 3) / diff));
+  const reb = Math.max(0, Math.round((a.rebounding || 25) * 0.12 + Math.random() * 5 - 1));
+  const ast = Math.max(0, Math.round((a.passing || 25) * 0.1 + Math.random() * 4 - 1));
+  const stl = Math.max(0, Math.round((a.steal || 25) * 0.06 + Math.random() * 2));
+  const blk = Math.max(0, Math.round((a.block || 25) * 0.04 + Math.random() * 2));
+  const min = Math.min(40, Math.max(12, Math.round(20 + off * 0.2 + Math.random() * 8)));
+
+  const won = Math.random() < 0.5 + (off + def) * 0.003;
+  const summary = won
+    ? `Win — ${pts} pts, ${reb} reb, ${ast} ast`
+    : `Loss — ${pts} pts, ${reb} reb, ${ast} ast`;
+
+  const game = { pts, reb, ast, stl, blk, min, won, summary };
+
+  // Update career totals
+  G.career.totalGames++;
+  G.career.totalPoints += pts;
+  G.career.totalRebounds += reb;
+  G.career.totalAssists += ast;
+
+  // Update recruiting interest
+  if (G.phase === 'highschool') {
+    const exposure = hs?.exposure || 1.0;
+    const perfRating = (pts * 2 + reb + ast * 1.5) * exposure;
+    if (perfRating > 30) {
+      G.highSchool.recruitingInterest.blueBlood = Math.min(100, G.highSchool.recruitingInterest.blueBlood + Math.round(perfRating * 0.15));
+      G.highSchool.recruitingInterest.midMajor = Math.min(100, G.highSchool.recruitingInterest.midMajor + Math.round(perfRating * 0.25));
+      G.highSchool.recruitingInterest.small = Math.min(100, G.highSchool.recruitingInterest.small + Math.round(perfRating * 0.35));
+    } else {
+      G.highSchool.recruitingInterest.midMajor = Math.min(100, G.highSchool.recruitingInterest.midMajor + Math.round(perfRating * 0.1));
+      G.highSchool.recruitingInterest.small = Math.min(100, G.highSchool.recruitingInterest.small + Math.round(perfRating * 0.2));
+    }
+  }
+
+  G.highSchool.gameLog.push(game);
+  return game;
+}
+
+function advanceSeason() {
+  G.season.year++;
+  G.season.week = 1;
+  G.player.age++;
+
+  if (G.phase === 'highschool' && G.highSchool.seasonsPlayed >= G.highSchool.maxSeasons) {
+    // Transition to college selection (placeholder for pass 2)
+    toast('High school career complete! College selection coming in next update.', 'success');
+    G.phase = 'college';
+  }
+
+  saveGame(false);
+  updateTopbar();
+  navigate('home');
+}
+
+// ─── SETTINGS PAGE ───
+
+function renderSettingsPage(c) {
+  c.innerHTML = `
+    <div class="card" style="max-width:500px;">
+      <div class="card-title">Game Settings</div>
+      <div class="form-group">
+        <label class="form-label">Sim Speed</label>
+        <select class="form-select" onchange="G.settings.simSpeed=this.value;saveGame(false);">
+          <option value="fast" ${G.settings.simSpeed==='fast'?'selected':''}>Fast</option>
+          <option value="normal" ${G.settings.simSpeed==='normal'?'selected':''}>Normal</option>
+          <option value="slow" ${G.settings.simSpeed==='slow'?'selected':''}>Slow (More Detail)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Difficulty</label>
+        <select class="form-select" onchange="G.settings.difficulty=this.value;saveGame(false);">
+          <option value="easy" ${G.settings.difficulty==='easy'?'selected':''}>Easy</option>
+          <option value="normal" ${G.settings.difficulty==='normal'?'selected':''}>Normal</option>
+          <option value="hard" ${G.settings.difficulty==='hard'?'selected':''}>Hard</option>
+        </select>
+      </div>
+    </div>
+  `;
+}
+
+// ─── SAVE/LOAD PAGE ───
+
+function renderSaveLoadPage(c) {
+  const slots = getAllSlots();
+  c.innerHTML = `
+    <div class="card" style="max-width:600px;">
+      <div class="card-title">Save Slots</div>
+      ${slots.map(s => {
+        if (s.data) {
+          const p = s.data.player;
+          const isCurrent = s.slot === currentSlot;
+          return `<div class="save-slot" style="${isCurrent?'border-color:var(--accent);':''}">
+            <div class="slot-info">
+              <div class="slot-name">${esc(p.firstName)} ${esc(p.lastName)} ${isCurrent?'<span style="color:var(--accent);font-size:11px;">(current)</span>':''}</div>
+              <div class="slot-detail">${p.position} &middot; ${s.data.phase} &middot; Season ${s.data.season?.year || 1}</div>
+              <div class="slot-detail">OVR ${p.overallRating} &middot; Saved ${formatTimestamp(s.data.lastSaved)}</div>
+            </div>
+            <div style="display:flex;gap:6px;">
+              ${!isCurrent ? `<button class="btn" style="font-size:11px;padding:6px 10px;" onclick="continueGame(${s.slot})">Load</button>` : ''}
+              <button class="slot-delete" onclick="confirmDeleteSlot(${s.slot});renderSaveLoadPage(document.getElementById('main-content'));" title="Delete">&times;</button>
+            </div>
+          </div>`;
+        } else {
+          return `<div class="save-slot" style="opacity:0.4;cursor:default;">
+            <div class="slot-info">
+              <div class="slot-name">Empty Slot ${s.slot + 1}</div>
+              <div class="slot-detail">No save data</div>
+            </div>
+          </div>`;
+        }
+      }).join('')}
+    </div>
+    <div class="card" style="max-width:600px;">
+      <div class="card-title">Manual Save / Backup</div>
+      <div class="btn-group">
+        <button class="btn primary" onclick="saveGame()">Save Now</button>
+        <button class="btn" onclick="exportSave()">Export Save (.json)</button>
+        <button class="btn" onclick="importSave()">Import Save</button>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--text-muted);">
+        Export creates a backup JSON file you can import later if you clear browser data.
+      </div>
+    </div>
+  `;
+}
+
+// ─── RATING RING COMPONENT ───
+
+function ratingRingHTML(value, label, size = '') {
+  const v = Math.max(0, Math.min(99, value));
+  const color = v >= 70 ? 'var(--green)' : v >= 50 ? 'var(--yellow)' : v >= 35 ? 'var(--accent)' : 'var(--red)';
+  const r = size === 'large' ? 36 : size === 'small' ? 18 : 28;
+  const circumference = 2 * Math.PI * r;
+  const offset = circumference - (v / 99) * circumference;
+  const sz = size === 'large' ? 80 : size === 'small' ? 44 : 64;
+
+  return `<div class="rating-ring ${size}" style="width:${sz}px;height:${sz}px;">
+    <svg width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}">
+      <circle cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/>
+      <circle cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="${color}" stroke-width="4"
+        stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" stroke-linecap="round"/>
+    </svg>
+    <span class="value" style="color:${color}">${v}</span>
+    <span class="label">${label}</span>
+  </div>`;
+}
+
+// ─── UTILITY ───
+
+function esc(str) {
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
+// ─── INIT ───
+
+window.addEventListener('load', () => {
+  showTitleScreen();
+});
+
+window.addEventListener('beforeunload', () => {
+  if (G && currentSlot !== null) {
+    saveGame(false);
+  }
+});
+</script>
+</body>
+</html>
