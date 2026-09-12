@@ -232,6 +232,31 @@ body { font-family: var(--font); background: var(--bg-darkest); color: var(--tex
   50% { box-shadow: 0 0 20px 4px rgba(249,115,22,0.2); }
 }
 .draft-pick-row.current { animation: draftPulse 1.5s infinite; background: var(--accent-dim); }
+
+.injury-banner { padding: 12px 16px; background: var(--red-dim); border: 1px solid var(--red); border-radius: var(--radius); margin-bottom: 16px; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.injury-banner .inj-icon { font-size: 20px; }
+.injury-banner .inj-text { flex: 1; }
+.injury-banner .inj-weeks { font-weight: 700; color: var(--red); }
+
+.rel-meter { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.rel-meter .rel-name { width: 100px; font-size: 12px; color: var(--text-secondary); }
+.rel-meter .rel-bar { flex: 1; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
+.rel-meter .rel-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.rel-meter .rel-val { width: 36px; text-align: right; font-size: 13px; font-weight: 700; }
+
+.milestone-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.milestone-item .m-icon { font-size: 20px; width: 32px; text-align: center; }
+.milestone-item .m-text { flex: 1; font-size: 13px; font-weight: 600; }
+.milestone-item .m-age { font-size: 12px; color: var(--text-muted); }
+
+.fa-offer { padding: 16px; background: var(--bg-input); border: 2px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: all 0.15s; margin-bottom: 10px; }
+.fa-offer:hover { border-color: var(--text-muted); }
+.fa-offer.selected { border-color: var(--accent); background: var(--accent-dim); }
+
+.aging-bar { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.aging-bar .phase-label { font-size: 11px; color: var(--text-muted); min-width: 50px; }
+.aging-bar .phase-track { flex: 1; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+.aging-bar .phase-fill { height: 100%; border-radius: 3px; }
 </style>
 </head>
 <body>
@@ -244,7 +269,7 @@ body { font-family: var(--font); background: var(--bg-darkest); color: var(--tex
     <div id="continue-slots"></div>
     <div class="title-import" onclick="importSave()">Import Save File</div>
   </div>
-  <div class="title-version">v0.3.0 &mdash; Pass 3</div>
+  <div class="title-version">v0.4.0 &mdash; Pass 4</div>
 </div>
 
 <div id="creation-screen" class="hidden" style="position:fixed;inset:0;z-index:900;background:var(--bg-darkest);overflow-y:auto;">
@@ -347,12 +372,12 @@ body { font-family: var(--font); background: var(--bg-darkest); color: var(--tex
 
 <script>
 // ═══════════════════════════════════════════════════
-// GAME ENGINE — Hardwood Legacy v0.3
+// GAME ENGINE — Hardwood Legacy v0.4
 // ═══════════════════════════════════════════════════
 
 const SAVE_KEY_PREFIX = 'hardwood_legacy_v1_slot_';
 const MAX_SLOTS = 3;
-const VERSION = '0.3.0';
+const VERSION = '0.4.0';
 
 const POSITIONS = {
   PG: { label: 'Point Guard', hintHeight: '6\'0" - 6\'4"', heightRange: [72, 76] },
@@ -503,6 +528,40 @@ const LAST_NAMES = ['Williams','Johnson','Brown','Davis','Wilson','Anderson','Th
 
 const HS_OPPONENTS = ['Westview High','Central Academy','Eastside Prep','North Valley','Southfield Academy','Heritage High','Summit Prep','Lakewood High','Crestview Academy','Pacific High','Mountain View','Capital Prep'];
 
+const INJURIES = [
+  { type: 'Ankle Sprain', severity: 'minor', minWeeks: 1, maxWeeks: 2, attrs: ['speed','vertical'], penalty: 5 },
+  { type: 'Knee Strain', severity: 'minor', minWeeks: 2, maxWeeks: 3, attrs: ['speed','vertical','layup'], penalty: 6 },
+  { type: 'Hamstring Pull', severity: 'moderate', minWeeks: 3, maxWeeks: 5, attrs: ['speed','stamina'], penalty: 8 },
+  { type: 'Finger Sprain', severity: 'minor', minWeeks: 1, maxWeeks: 2, attrs: ['threePoint','midRange','freeThrow'], penalty: 4 },
+  { type: 'Back Spasms', severity: 'moderate', minWeeks: 2, maxWeeks: 4, attrs: ['strength','rebounding'], penalty: 7 },
+  { type: 'Wrist Injury', severity: 'minor', minWeeks: 1, maxWeeks: 3, attrs: ['ballHandling','passing','threePoint'], penalty: 5 },
+  { type: 'Shoulder Strain', severity: 'moderate', minWeeks: 3, maxWeeks: 6, attrs: ['dunk','closeShot','strength'], penalty: 8 },
+  { type: 'Concussion', severity: 'moderate', minWeeks: 2, maxWeeks: 4, attrs: ['passing','ballHandling'], penalty: 6 },
+  { type: 'Broken Hand', severity: 'severe', minWeeks: 6, maxWeeks: 10, attrs: ['closeShot','midRange','threePoint','freeThrow','ballHandling'], penalty: 12 },
+  { type: 'ACL Tear', severity: 'severe', minWeeks: 20, maxWeeks: 30, attrs: ['speed','vertical','layup','dunk'], penalty: 15 },
+];
+
+const MILESTONE_DEFS = [
+  { id: 'games100', text: '100 Career Games', icon: '\u{1F3C0}', check: g => g.career.totalGames >= 100 },
+  { id: 'games500', text: '500 Career Games', icon: '\u{1F3C0}', check: g => g.career.totalGames >= 500 },
+  { id: 'games1000', text: '1,000 Career Games', icon: '\u{1F451}', check: g => g.career.totalGames >= 1000 },
+  { id: 'pts1000', text: '1,000 Career Points', icon: '\u{1F525}', check: g => g.career.totalPoints >= 1000 },
+  { id: 'pts5000', text: '5,000 Career Points', icon: '\u{1F525}', check: g => g.career.totalPoints >= 5000 },
+  { id: 'pts10000', text: '10,000 Career Points', icon: '\u{2B50}', check: g => g.career.totalPoints >= 10000 },
+  { id: 'pts20000', text: '20,000 Career Points', icon: '\u{1F31F}', check: g => g.career.totalPoints >= 20000 },
+  { id: 'pts30000', text: '30,000 Career Points', icon: '\u{1F48E}', check: g => g.career.totalPoints >= 30000 },
+  { id: 'reb3000', text: '3,000 Career Rebounds', icon: '\u{1F4AA}', check: g => g.career.totalRebounds >= 3000 },
+  { id: 'reb5000', text: '5,000 Career Rebounds', icon: '\u{1F4AA}', check: g => g.career.totalRebounds >= 5000 },
+  { id: 'ast2000', text: '2,000 Career Assists', icon: '\u{1F91D}', check: g => g.career.totalAssists >= 2000 },
+  { id: 'ast5000', text: '5,000 Career Assists', icon: '\u{1F91D}', check: g => g.career.totalAssists >= 5000 },
+  { id: 'allstar3', text: '3x All-Star', icon: '\u{2B50}', check: g => g.career.awards.filter(a=>a.name==='All-Star').length >= 3 },
+  { id: 'allstar10', text: '10x All-Star', icon: '\u{1F31F}', check: g => g.career.awards.filter(a=>a.name==='All-Star').length >= 10 },
+  { id: 'mvp', text: 'First MVP Award', icon: '\u{1F3C6}', check: g => g.career.awards.some(a=>a.name==='MVP') },
+  { id: 'mvp3', text: '3x MVP', icon: '\u{1F48E}', check: g => g.career.awards.filter(a=>a.name==='MVP').length >= 3 },
+  { id: 'champ', text: 'First Championship', icon: '\u{1F48D}', check: g => g.career.awards.some(a=>a.name==='Championship') },
+  { id: 'dpoy', text: 'Defensive Player of the Year', icon: '\u{1F6E1}', check: g => g.career.awards.some(a=>a.name==='DPOY') },
+];
+
 function randFrom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
@@ -614,15 +673,20 @@ function defaultState() {
     },
     pro: {
       team: null, seasonsPlayed: 0, contract: null, role: 'bench',
-      relationships: { coach: 50, teammate1: 50, teammate2: 50, frontOffice: 50, fans: 50 },
-      injuries: [], tradeHistory: [], seasonStats: [], gameLog: [],
+      relationships: { coach: 50, teammates: 50, frontOffice: 50, fans: 50 },
+      currentInjury: null,
+      injuries: [], tradeHistory: [], transactions: [],
+      seasonStats: [], gameLog: [],
       record: { w: 0, l: 0 },
       currentSeasonStats: { gp: 0, pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, min: 0, fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0 },
       roster: [],
+      prevOvr: null,
+      tradeRequested: false,
     },
     career: {
       stats: [], awards: [], milestones: [],
       totalGames: 0, totalPoints: 0, totalRebounds: 0, totalAssists: 0,
+      milestoneFlags: {},
     },
     settings: { simSpeed: 'normal', difficulty: 'normal' },
     _weekAlloc: [3, 1, 1, 2],
@@ -817,6 +881,15 @@ function enterGame() {
   document.getElementById('creation-screen').classList.add('hidden');
   document.getElementById('app').classList.add('active');
   if (!G.draft) G.draft = defaultState().draft;
+  if (!G.pro.currentInjury) G.pro.currentInjury = null;
+  if (!G.pro.transactions) G.pro.transactions = [];
+  if (!G.pro.tradeRequested) G.pro.tradeRequested = false;
+  if (!G.pro.prevOvr) G.pro.prevOvr = null;
+  if (!G.career.milestoneFlags) G.career.milestoneFlags = {};
+  if (!G.pro.relationships) G.pro.relationships = { coach:50, teammates:50, frontOffice:50, fans:50 };
+  if (G.pro.relationships.teammate1 !== undefined) {
+    G.pro.relationships = { coach: G.pro.relationships.coach||50, teammates: G.pro.relationships.teammate1||50, frontOffice: G.pro.relationships.frontOffice||50, fans: G.pro.relationships.fans||50 };
+  }
   computeRatings();
   document.getElementById('topbar-avatar').textContent = (G.player.firstName[0]||'')+(G.player.lastName[0]||'');
   updateTopbar(); updateSaveTimestamp(); navigate('home');
@@ -843,12 +916,11 @@ function navigate(page) {
 }
 function renderPage(page) {
   const c = document.getElementById('main-content');
-  const r = { home:renderHomePage, player:renderPlayerPage, development:renderDevelopmentPage, team:renderTeamPage, schedule:renderSchedulePage, stats:renderStatsPage, awards:renderAwardsPage, settings:renderSettingsPage, saveload:renderSaveLoadPage };
+  const r = { home:renderHomePage, player:renderPlayerPage, development:renderDevelopmentPage, team:renderTeamPage, schedule:renderSchedulePage, contracts:renderContractsPage, stats:renderStatsPage, awards:renderAwardsPage, transactions:renderTransactionsPage, relationships:renderRelationshipsPage, milestones:renderMilestonesPage, settings:renderSettingsPage, saveload:renderSaveLoadPage };
   (r[page]||renderPlaceholder)(c, page);
 }
 function renderPlaceholder(c, page) {
-  const icons = { contracts:'\u{1F4B0}', transactions:'\u{1F504}', relationships:'\u{1F91D}', milestones:'\u{1F3AF}' };
-  c.innerHTML = `<div class="placeholder-page"><div class="ph-icon">${icons[page]||'\u{1F6A7}'}</div><div class="ph-text">Coming Soon</div><div class="ph-sub">This feature will be available in a future update</div></div>`;
+  c.innerHTML = `<div class="placeholder-page"><div class="ph-icon">\u{1F6A7}</div><div class="ph-text">Coming Soon</div><div class="ph-sub">This feature will be available in a future update</div></div>`;
 }
 
 // ─── HOME PAGE ───
@@ -856,6 +928,7 @@ function renderPlaceholder(c, page) {
 function renderHomePage(c) {
   if (G.phase === 'draft') { renderDraftHomePage(c); return; }
   if (G.phase === 'pro') { renderProHomePage(c); return; }
+  if (G.phase === 'retired') { renderRetiredHomePage(c); return; }
 
   const p = G.player;
   const pl = {highschool:'High School',college:'College',draft:'Draft',pro:'Pro',retired:'Retired'};
@@ -1019,8 +1092,13 @@ function renderProHomePage(c) {
   const rec = G.pro.record;
   const contract = G.pro.contract;
   const nextGame = G.season.schedule[G.season.nextGameIdx];
+  const inj = G.pro.currentInjury;
+  const rels = G.pro.relationships || { coach:50, teammates:50, frontOffice:50, fans:50 };
+  const agePhase = p.age < 28 ? 'Prime' : p.age < 32 ? 'Veteran' : p.age < 36 ? 'Declining' : 'Twilight';
+  const ageCol = p.age < 28 ? 'var(--green)' : p.age < 32 ? 'var(--yellow)' : 'var(--red)';
 
   c.innerHTML = `
+    ${inj ? `<div class="injury-banner"><span class="inj-icon">\u{1FA79}</span><div class="inj-text"><strong>${esc(inj.type)}</strong> &mdash; ${inj.severity} injury. You will miss games until healed.</div><span class="inj-weeks">${inj.weeksLeft} week${inj.weeksLeft!==1?'s':''} remaining</span></div>` : ''}
     <div class="card-grid">
       <div class="card">
         <div class="card-title">Player Overview</div>
@@ -1031,6 +1109,7 @@ function renderProHomePage(c) {
             <div style="font-size:13px;color:var(--text-secondary);">${POSITIONS[p.position]?.label} &middot; ${p.heightFt}'${p.heightIn}" &middot; ${p.weight} lbs</div>
             <div style="font-size:13px;color:var(--accent);font-weight:600;margin-top:2px;">${team?.name||'Free Agent'}</div>
             <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Age ${p.age} &middot; ${{bench:'Bench',rotation:'Rotation',starter:'Starter',star:'Star',superstar:'Superstar'}[G.pro.role]||G.pro.role}</div>
+            <div style="font-size:11px;margin-top:2px;"><span style="color:${ageCol};">${agePhase}</span> &middot; Season ${G.pro.seasonsPlayed}</div>
           </div>
         </div>
         <div style="display:flex;gap:24px;margin-top:20px;justify-content:center;">
@@ -1053,11 +1132,76 @@ function renderProHomePage(c) {
         ${statBox('PPG',(cs.pts/cs.gp).toFixed(1))} ${statBox('RPG',(cs.reb/cs.gp).toFixed(1))} ${statBox('APG',(cs.ast/cs.gp).toFixed(1))}
         ${statBox('SPG',(cs.stl/cs.gp).toFixed(1))} ${statBox('BPG',(cs.blk/cs.gp).toFixed(1))} ${statBox('MPG',(cs.min/cs.gp).toFixed(1))}
       </div></div>` : ''}
-    ${nextGame && !nextGame.played ? `<div class="card"><div class="card-title">Next Game</div>
-      <div style="font-size:15px;font-weight:700;">vs ${esc(nextGame.opponent)}</div>
-      <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Week ${nextGame.week} &middot; Opponent Strength: ${nextGame.oppStrength}</div>
-    </div>` : ''}
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-title">Relationships</div>
+        ${relMeterHTML('Coach', rels.coach)}
+        ${relMeterHTML('Teammates', rels.teammates)}
+        ${relMeterHTML('Front Office', rels.frontOffice)}
+        ${relMeterHTML('Fans', rels.fans)}
+      </div>
+      ${nextGame && !nextGame.played ? `<div class="card"><div class="card-title">Next Game</div>
+        ${inj ? `<div style="font-size:13px;color:var(--red);margin-bottom:8px;">You are injured and will miss this game (DNP).</div>` : ''}
+        <div style="font-size:15px;font-weight:700;">vs ${esc(nextGame.opponent)}</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Week ${nextGame.week} &middot; Opponent Strength: ${nextGame.oppStrength}</div>
+      </div>` : `<div class="card"><div class="card-title">Schedule</div><div style="font-size:13px;color:var(--text-muted);">No upcoming games.</div></div>`}
+    </div>
   `;
+}
+
+function relMeterHTML(name, val) {
+  const v = clamp(val||50, 0, 100);
+  const col = v >= 70 ? 'var(--green)' : v >= 40 ? 'var(--yellow)' : 'var(--red)';
+  return `<div class="rel-meter"><span class="rel-name">${name}</span><div class="rel-bar"><div class="rel-fill" style="width:${v}%;background:${col};"></div></div><span class="rel-val" style="color:${col}">${v}</span></div>`;
+}
+
+function renderRetiredHomePage(c) {
+  const p = G.player;
+  const allStars = G.career.awards.filter(a=>a.name==='All-Star').length;
+  const mvps = G.career.awards.filter(a=>a.name==='MVP').length;
+  const rings = G.career.awards.filter(a=>a.name==='Championship').length;
+  let legacy = 'Journeyman';
+  if (mvps >= 3 && rings >= 2) legacy = 'All-Time Great';
+  else if (mvps >= 1 || (allStars >= 8 && rings >= 1)) legacy = 'Hall of Famer';
+  else if (allStars >= 5) legacy = 'Franchise Legend';
+  else if (allStars >= 3) legacy = 'Star Player';
+  else if (G.pro.seasonsPlayed >= 10) legacy = 'Respected Veteran';
+
+  c.innerHTML = `
+    <div class="card" style="text-align:center;padding:32px;">
+      <div style="font-size:40px;margin-bottom:12px;">${legacy==='All-Time Great'?'\u{1F451}':legacy==='Hall of Famer'?'\u{1F31F}':'\u{1F3C0}'}</div>
+      <div style="font-size:28px;font-weight:800;color:var(--accent);margin-bottom:4px;">${esc(p.firstName)} ${esc(p.lastName)}</div>
+      <div style="font-size:16px;color:var(--text-secondary);margin-bottom:4px;">${legacy}</div>
+      <div style="font-size:13px;color:var(--text-muted);">${POSITIONS[p.position]?.label} &middot; ${p.heightFt}'${p.heightIn}" &middot; Retired at ${p.age}</div>
+    </div>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-title">Career Numbers</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;text-align:center;">
+          ${statBox('Games', G.career.totalGames)}
+          ${statBox('Points', G.career.totalPoints)}
+          ${statBox('Rebounds', G.career.totalRebounds)}
+          ${statBox('Assists', G.career.totalAssists)}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Honors</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;text-align:center;">
+          ${statBox('All-Stars', allStars)}
+          ${statBox('MVPs', mvps)}
+          ${statBox('Rings', rings)}
+          ${statBox('Pro Seasons', G.pro.seasonsPlayed)}
+        </div>
+      </div>
+    </div>
+    <div class="card"><div class="card-title">Explore Your Legacy</div>
+      <div class="btn-group">
+        <button class="btn" onclick="navigate('stats')">Career Stats</button>
+        <button class="btn" onclick="navigate('awards')">Awards</button>
+        <button class="btn" onclick="navigate('milestones')">Milestones</button>
+        <button class="btn" onclick="navigate('transactions')">Transactions</button>
+      </div>
+    </div>`;
 }
 
 function statBox(label, val) {
@@ -1115,6 +1259,7 @@ function renderDevelopmentPage(c) {
     return;
   }
 
+  const inj = G.phase === 'pro' ? G.pro.currentInjury : null;
   const names = ['Practice', 'Film Study', 'Strength & Conditioning', 'Social / Rest'];
   const icons = ['\u{1F3C0}','\u{1F4FA}','\u{1F4AA}','\u{1F6CC}'];
   const descs = ['Improve shooting, ball handling, and skill attributes','Boost basketball IQ (small chance to improve any attribute)','Build speed, strength, stamina, and vertical','Recover fatigue, prevent burnout, boost morale'];
@@ -1123,22 +1268,25 @@ function renderDevelopmentPage(c) {
   const seasonOver = G.season.week > G.season.maxWeeks;
 
   c.innerHTML = `
+    ${inj ? `<div class="injury-banner"><span class="inj-icon">\u{1FA79}</span><div class="inj-text"><strong>${esc(inj.type)}</strong> — Only film study is available while injured.</div><span class="inj-weeks">${inj.weeksLeft} wk${inj.weeksLeft!==1?'s':''}</span></div>` : ''}
     <div class="card">
       <div class="card-title">Weekly Training Plan &mdash; Week ${G.season.week}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
         <span style="font-size:13px;color:var(--text-secondary);">Allocate sessions: <strong>${total}</strong> / 7</span>
         <span style="font-size:12px;color:var(--text-muted);">Fatigue: ${G.player.fatigue||0}% &middot; Morale: ${G.player.morale||80}%</span>
       </div>
-      ${names.map((name,i)=>`
-        <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
+      ${names.map((name,i)=>{
+        const locked = inj && (i === 0 || i === 2);
+        return `
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);${locked?'opacity:0.4;':''}">
           <span style="font-size:20px;width:32px;text-align:center;">${icons[i]}</span>
-          <div style="flex:1;"><div style="font-weight:600;font-size:14px;">${name}</div><div style="font-size:11px;color:var(--text-muted);">${descs[i]}</div></div>
+          <div style="flex:1;"><div style="font-weight:600;font-size:14px;">${name}${locked?' (Unavailable)':''}</div><div style="font-size:11px;color:var(--text-muted);">${descs[i]}</div></div>
           <div style="display:flex;align-items:center;gap:8px;">
-            <button class="attr-btn" onclick="adjAlloc(${i},-1)" ${alloc[i]<=0?'disabled':''}>-</button>
-            <span style="font-size:18px;font-weight:700;width:28px;text-align:center;">${alloc[i]}</span>
-            <button class="attr-btn" onclick="adjAlloc(${i},1)" ${total>=7?'disabled':''}>+</button>
+            <button class="attr-btn" onclick="adjAlloc(${i},-1)" ${alloc[i]<=0||locked?'disabled':''}>-</button>
+            <span style="font-size:18px;font-weight:700;width:28px;text-align:center;">${locked?0:alloc[i]}</span>
+            <button class="attr-btn" onclick="adjAlloc(${i},1)" ${total>=7||locked?'disabled':''}>+</button>
           </div>
-        </div>`).join('')}
+        </div>`;}).join('')}
       <div class="btn-group" style="justify-content:space-between;align-items:center;">
         <span style="font-size:12px;color:var(--text-muted);">${seasonOver?'Season is over':'Next game: '+(getNextGameInfo()||'None scheduled')}</span>
         <div style="display:flex;gap:8px;">
@@ -1164,28 +1312,61 @@ function simWeek() {
   const alloc = G._weekAlloc||[3,1,1,2];
   const a = G.player.attributes, caps = G.player.potentialCaps;
   const phase = G.phase;
+  const injured = phase === 'pro' && G.pro.currentInjury;
   const devMul = phase==='highschool' ? (HIGH_SCHOOLS.find(h=>h.id===G.highSchool.school)?.devBonus||1)
-    : phase==='college' ? (COLLEGE_PROGRAMS.find(p=>p.id===G.college.school)?.coach.devBonus||1) : 1;
+    : phase==='college' ? (COLLEGE_PROGRAMS.find(p=>p.id===G.college.school)?.coach.devBonus||1) : 0.7;
 
-  const offKeys = ['closeShot','midRange','threePoint','freeThrow','layup','dunk','ballHandling','passing'];
-  const physKeys = ['speed','strength','stamina','vertical'];
-  for(let s=0;s<alloc[0];s++){const k=randFrom(offKeys); if(Math.random()<0.55&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+Math.round(devMul));results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1');}}
-  for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key; if(Math.random()<0.25&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+1);results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1 (IQ)');}}
-  for(let s=0;s<alloc[2];s++){const k=randFrom(physKeys); if(Math.random()<0.55&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+Math.round(devMul));results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1');}}
+  if (injured) {
+    for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key; if(Math.random()<0.2&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+1);results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1 (Film Study)');}}
+    results.push(`Injured (${G.pro.currentInjury.type}) — limited to film study only`);
+  } else {
+    const offKeys = ['closeShot','midRange','threePoint','freeThrow','layup','dunk','ballHandling','passing'];
+    const physKeys = ['speed','strength','stamina','vertical'];
+    for(let s=0;s<alloc[0];s++){const k=randFrom(offKeys); if(Math.random()<0.55&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+Math.round(devMul));results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1');}}
+    for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key; if(Math.random()<0.25&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+1);results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1 (IQ)');}}
+    for(let s=0;s<alloc[2];s++){const k=randFrom(physKeys); if(Math.random()<0.55&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+Math.round(devMul));results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1');}}
+  }
 
   const restSessions = alloc[3];
-  G.player.fatigue = clamp((G.player.fatigue||0) + (7 - restSessions) * 2 - restSessions * 5, 0, 100);
-  G.player.morale = clamp((G.player.morale||80) + restSessions * 3 - (G.player.fatigue > 60 ? 5 : 0), 20, 100);
-  if(restSessions>=2) results.push('Well-rested (fatigue -' + (restSessions*5) + '%)');
+  G.player.fatigue = clamp((G.player.fatigue||0) + (injured ? -8 : (7 - restSessions) * 2 - restSessions * 5), 0, 100);
+  G.player.morale = clamp((G.player.morale||80) + restSessions * 3 - (G.player.fatigue > 60 ? 5 : 0) - (injured ? 3 : 0), 20, 100);
+  if(restSessions>=2 && !injured) results.push('Well-rested (fatigue -' + (restSessions*5) + '%)');
+
+  if (phase === 'pro' && G.pro.currentInjury) {
+    G.pro.currentInjury.weeksLeft--;
+    if (G.pro.currentInjury.weeksLeft <= 0) {
+      results.push(`\u{2705} Recovered from ${G.pro.currentInjury.type}!`);
+      G.pro.currentInjury = null;
+    } else {
+      results.push(`\u{1FA79} ${G.pro.currentInjury.type}: ${G.pro.currentInjury.weeksLeft} week(s) remaining`);
+    }
+  }
 
   let gameResult = null;
   const sched = G.season.schedule;
   while(G.season.nextGameIdx < sched.length && sched[G.season.nextGameIdx].week <= G.season.week) {
-    gameResult = simGame(sched[G.season.nextGameIdx]);
-    sched[G.season.nextGameIdx].played = true;
-    sched[G.season.nextGameIdx].result = gameResult;
-    G.season.nextGameIdx++;
-    results.push(`Game vs ${gameResult.opponent}: ${gameResult.won?'W':'L'} — ${gameResult.pts}/${gameResult.reb}/${gameResult.ast}`);
+    if (injured) {
+      const entry = sched[G.season.nextGameIdx];
+      const teamOvr = G.pro.roster.length > 0 ? G.pro.roster.reduce((s,t)=>s+t.ovr,0)/G.pro.roster.length : 65;
+      const ts = clamp(Math.round(55 + teamOvr*0.5 + randInt(-12,12)), 45, 120);
+      const os = clamp(Math.round(55 + entry.oppStrength*0.7 + randInt(-12,12)), 40, 125);
+      entry.played = true;
+      entry.result = { opponent: entry.opponent, pts:0, reb:0, ast:0, stl:0, blk:0, min:0, fgm:0, fga:0, tpm:0, tpa:0, ftm:0, fta:0, won: ts > os, teamScore: ts, oppScore: os, week: entry.week, dnp: true };
+      if (ts > os) G.pro.record.w++; else G.pro.record.l++;
+      G.season.nextGameIdx++;
+      results.push(`Game vs ${entry.opponent}: ${ts>os?'W':'L'} ${ts}-${os} (DNP - Injured)`);
+    } else {
+      gameResult = simGame(sched[G.season.nextGameIdx]);
+      sched[G.season.nextGameIdx].played = true;
+      sched[G.season.nextGameIdx].result = gameResult;
+      G.season.nextGameIdx++;
+      results.push(`Game vs ${gameResult.opponent}: ${gameResult.won?'W':'L'} — ${gameResult.pts}/${gameResult.reb}/${gameResult.ast}`);
+    }
+  }
+
+  if (phase === 'pro') {
+    updateRelationships(gameResult);
+    checkMilestones(results);
   }
 
   G.season.week++;
@@ -1213,15 +1394,24 @@ function simToNextGame() {
 function simWeekSilent() {
   const alloc = G._weekAlloc||[3,1,1,2];
   const a = G.player.attributes, caps = G.player.potentialCaps;
+  const injured = G.phase === 'pro' && G.pro.currentInjury;
   const devMul = G.phase==='highschool'?(HIGH_SCHOOLS.find(h=>h.id===G.highSchool.school)?.devBonus||1)
-    :G.phase==='college'?(COLLEGE_PROGRAMS.find(p=>p.id===G.college.school)?.coach.devBonus||1):1;
-  const offKeys=['closeShot','midRange','threePoint','freeThrow','layup','dunk','ballHandling','passing'];
-  const physKeys=['speed','strength','stamina','vertical'];
-  for(let s=0;s<alloc[0];s++){const k=randFrom(offKeys);if(Math.random()<0.55&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+Math.round(devMul));}
-  for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key;if(Math.random()<0.25&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+1);}
-  for(let s=0;s<alloc[2];s++){const k=randFrom(physKeys);if(Math.random()<0.55&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+Math.round(devMul));}
-  G.player.fatigue=clamp((G.player.fatigue||0)+(7-alloc[3])*2-alloc[3]*5,0,100);
-  G.player.morale=clamp((G.player.morale||80)+alloc[3]*3-(G.player.fatigue>60?5:0),20,100);
+    :G.phase==='college'?(COLLEGE_PROGRAMS.find(p=>p.id===G.college.school)?.coach.devBonus||1):0.7;
+  if (!injured) {
+    const offKeys=['closeShot','midRange','threePoint','freeThrow','layup','dunk','ballHandling','passing'];
+    const physKeys=['speed','strength','stamina','vertical'];
+    for(let s=0;s<alloc[0];s++){const k=randFrom(offKeys);if(Math.random()<0.55&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+Math.round(devMul));}
+    for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key;if(Math.random()<0.25&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+1);}
+    for(let s=0;s<alloc[2];s++){const k=randFrom(physKeys);if(Math.random()<0.55&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+Math.round(devMul));}
+  } else {
+    for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key;if(Math.random()<0.2&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+1);}
+  }
+  G.player.fatigue=clamp((G.player.fatigue||0)+(injured?-8:(7-alloc[3])*2-alloc[3]*5),0,100);
+  G.player.morale=clamp((G.player.morale||80)+alloc[3]*3-(G.player.fatigue>60?5:0)-(injured?3:0),20,100);
+  if (G.phase === 'pro' && G.pro.currentInjury) {
+    G.pro.currentInjury.weeksLeft--;
+    if (G.pro.currentInjury.weeksLeft <= 0) G.pro.currentInjury = null;
+  }
   G.season.week++;
   computeRatings();
 }
@@ -1315,6 +1505,8 @@ function simGame(schedEntry) {
   if(phase==='college') updateDraftStock(game);
 
   G.player.fatigue = clamp((G.player.fatigue||0) + Math.round(min * 0.3), 0, 100);
+
+  if (phase === 'pro') checkInjury();
 
   return game;
 }
@@ -2075,7 +2267,9 @@ function beginProCareer() {
   G.player.fatigue = 0;
   G.player.morale = 80;
 
-  G.career.milestones.push({ text: `Entered pro career with ${team.name} (Pick #${pickNum||'UDFA'})`, age: G.player.age });
+  G.pro.prevOvr = G.player.overallRating;
+  G.career.milestones.push({ text: `Entered pro career with ${team.name} (Pick #${pickNum||'UDFA'})`, age: G.player.age, icon: '\u{1F3C0}' });
+  G.pro.transactions.push({ type: 'Drafted', team: team.name, from: '', season: 1, salary: G.pro.contract.salary, years: G.pro.contract.years });
 
   saveGame(false);
   toast(`Welcome to the ${team.name}!`, 'success');
@@ -2100,15 +2294,31 @@ function endProSeason() {
   const cs = G.pro.currentSeasonStats;
   const rec = G.pro.record;
   const team = PRO_TEAMS.find(t => t.id === G.pro.team);
+  const prevOvr = G.pro.prevOvr || G.player.overallRating;
 
   const seasonAwards = [];
   if (cs.gp > 0) {
     const ppg = cs.pts/cs.gp, rpg = cs.reb/cs.gp, apg = cs.ast/cs.gp;
-    if (ppg >= 25 && G.player.overallRating >= 82) seasonAwards.push('All-Star');
-    if (ppg >= 28 && rpg >= 7 && G.player.overallRating >= 85) seasonAwards.push('All-Pro 1st Team');
-    else if (ppg >= 22 && G.player.overallRating >= 78) seasonAwards.push('All-Pro 2nd Team');
-    if (G.pro.seasonsPlayed === 1 && ppg >= 15) seasonAwards.push('Rookie of the Year');
-    if (ppg >= 30 && G.player.overallRating >= 88) seasonAwards.push('MVP');
+    const spg = cs.stl/cs.gp, bpg = cs.blk/cs.gp;
+
+    if (ppg >= 20 && G.player.overallRating >= 75) seasonAwards.push('All-Star');
+    if (ppg >= 26 && rpg >= 6 && G.player.overallRating >= 85) seasonAwards.push('All-Pro 1st Team');
+    else if (ppg >= 20 && G.player.overallRating >= 78) seasonAwards.push('All-Pro 2nd Team');
+    else if (ppg >= 16 && G.player.overallRating >= 72) seasonAwards.push('All-Pro 3rd Team');
+    if (G.pro.seasonsPlayed === 1 && ppg >= 12) seasonAwards.push('Rookie of the Year');
+    if (ppg >= 28 && G.player.overallRating >= 88 && rec.w > rec.l * 1.5) seasonAwards.push('MVP');
+    if ((spg + bpg) >= 3.5 && G.player.defenseRating >= 75) seasonAwards.push('DPOY');
+    if (G.pro.role !== 'starter' && G.pro.role !== 'star' && G.pro.role !== 'superstar' && ppg >= 14) seasonAwards.push('6th Man of the Year');
+    if (G.player.overallRating - prevOvr >= 5 && G.pro.seasonsPlayed > 1) seasonAwards.push('Most Improved Player');
+    if (ppg >= 25) seasonAwards.push('Scoring Champion');
+    if (rpg >= 10) seasonAwards.push('Rebound Leader');
+    if (apg >= 8) seasonAwards.push('Assist Leader');
+    if (rec.w >= 55) {
+      const champRoll = Math.random();
+      const champChance = G.player.overallRating >= 85 ? 0.45 : G.player.overallRating >= 78 ? 0.25 : 0.1;
+      if (champRoll < champChance) seasonAwards.push('Championship');
+    }
+    if (seasonAwards.includes('Championship') && ppg >= 25) seasonAwards.push('Finals MVP');
   }
 
   seasonAwards.forEach(aw => G.career.awards.push({ name: aw, year: G.season.year, phase: 'pro', team: team?.name||'' }));
@@ -2123,58 +2333,93 @@ function endProSeason() {
   G.career.stats.push(logEntry);
   G.pro.seasonsPlayed++;
   G.player.age++;
+  G.pro.currentInjury = null;
 
-  // Role progression
   if (cs.gp > 0) {
     const ppg = cs.pts/cs.gp;
     if (G.pro.role === 'bench' && ppg >= 10) G.pro.role = 'rotation';
     else if (G.pro.role === 'rotation' && ppg >= 16) G.pro.role = 'starter';
     else if (G.pro.role === 'starter' && ppg >= 22) G.pro.role = 'star';
     else if (G.pro.role === 'star' && ppg >= 27) G.pro.role = 'superstar';
+    else if (ppg < 8 && G.pro.role === 'starter') G.pro.role = 'rotation';
+    else if (ppg < 14 && G.pro.role === 'star') G.pro.role = 'starter';
   }
 
-  // Contract year check
-  if (G.pro.contract) {
-    G.pro.contract.years--;
-    if (G.pro.contract.years <= 0) {
-      G.pro.contract.salary = Math.round(G.pro.contract.salary * (G.pro.role === 'star' ? 2.5 : G.pro.role === 'starter' ? 1.8 : 1.2));
-      G.pro.contract.years = G.pro.role === 'star' ? 5 : G.pro.role === 'starter' ? 3 : 2;
-      G.pro.contract.type = 'Extension';
-    }
-  }
+  applyAging();
 
-  // Show summary
+  if (G.pro.contract) G.pro.contract.years--;
+
+  const contractExpired = G.pro.contract && G.pro.contract.years <= 0;
+  const canRetire = G.player.age >= 30 || G.pro.seasonsPlayed >= 10;
+  const forceRetire = G.player.overallRating < 40 || G.player.age >= 42;
+
   const gp = cs.gp || 1;
-  let html = `<div class="modal-title">\u{1F3C6} Season Complete</div>
+  const agePhase = G.player.age < 28 ? 'Prime' : G.player.age < 32 ? 'Veteran' : G.player.age < 36 ? 'Declining' : 'Twilight';
+  const ageCol = G.player.age < 28 ? 'var(--green)' : G.player.age < 32 ? 'var(--yellow)' : 'var(--red)';
+
+  let html = `<div class="modal-title">\u{1F3C6} Season ${G.pro.seasonsPlayed} Complete</div>
     <div style="margin-bottom:16px;">
       <div style="font-size:15px;font-weight:700;margin-bottom:4px;">${team?.name||''} &middot; ${rec.w}-${rec.l}</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:13px;text-align:center;margin-top:8px;">
         ${statBox('PPG',(cs.pts/gp).toFixed(1))} ${statBox('RPG',(cs.reb/gp).toFixed(1))} ${statBox('APG',(cs.ast/gp).toFixed(1))} ${statBox('MPG',(cs.min/gp).toFixed(1))}
       </div>
       ${seasonAwards.length>0?`<div style="margin-top:12px;">${seasonAwards.map(a=>`<span class="badge badge-green" style="margin-right:6px;">${a}</span>`).join('')}</div>`:''}
+      <div style="margin-top:12px;padding:10px;background:var(--bg-input);border-radius:var(--radius-sm);">
+        <div style="font-size:13px;color:var(--text-secondary);">Age: <strong>${G.player.age}</strong> (<span style="color:${ageCol}">${agePhase}</span>) &middot; OVR: <strong>${G.player.overallRating}</strong></div>
+        ${G.player.age >= 28 ? `<div style="font-size:12px;color:var(--red);margin-top:4px;">Physical attributes declined due to aging.</div>` : ''}
+      </div>
+    </div>`;
+
+  if (forceRetire) {
+    html += `<div style="padding:12px;background:var(--red-dim);border:1px solid var(--red);border-radius:var(--radius-sm);margin-bottom:16px;font-size:13px;">
+      Your body can no longer keep up with the demands of professional basketball. It's time to hang up the sneakers.
     </div>
     <div class="btn-group" style="justify-content:flex-end;">
+      <button class="btn primary" onclick="retirePlayer()">Retire \u{1F44B}</button>
+    </div>`;
+  } else if (contractExpired) {
+    html += `<div style="padding:12px;background:var(--yellow-dim);border:1px solid var(--yellow);border-radius:var(--radius-sm);margin-bottom:16px;font-size:13px;">
+      Your contract has expired. You are now a free agent!
+    </div>
+    <div class="btn-group" style="justify-content:flex-end;">
+      ${canRetire ? `<button class="btn danger" onclick="retirePlayer()">Retire \u{1F44B}</button>` : ''}
+      <button class="btn primary" onclick="closeModal();showFreeAgencyOffers()">Enter Free Agency ▶</button>
+    </div>`;
+  } else {
+    html += `<div class="btn-group" style="justify-content:flex-end;">
+      ${canRetire ? `<button class="btn danger" onclick="retirePlayer()">Retire \u{1F44B}</button>` : ''}
       <button class="btn primary" onclick="startNextProSeason()">Next Season ▶</button>
     </div>`;
+  }
+
   showModal(html);
+  saveGame(false);
 }
 
 function startNextProSeason() {
   closeModal();
+  G.pro.prevOvr = G.player.overallRating;
   G.season.year++;
   G.season.week = 1;
   G.season.nextGameIdx = 0;
   G.pro.record = { w: 0, l: 0 };
   G.pro.currentSeasonStats = {gp:0,pts:0,reb:0,ast:0,stl:0,blk:0,min:0,fgm:0,fga:0,tpm:0,tpa:0,ftm:0,fta:0};
   G.pro.gameLog = [];
+  G.pro.tradeRequested = false;
   G.season.schedule = generateProSchedule();
-  // Roster turnover
   G.pro.roster = G.pro.roster.map(t => ({...t, ovr: clamp(t.ovr + randInt(-3, 3), 50, 92)}));
+  if (Math.random() < 0.3) {
+    const idx = randInt(0, G.pro.roster.length - 1);
+    G.pro.roster.splice(idx, 1);
+  }
   const team = PRO_TEAMS.find(t => t.id === G.pro.team);
   const range = team && team.prestige >= 70 ? [70,85] : team && team.prestige >= 50 ? [62,78] : [55,72];
   while (G.pro.roster.length < 14) G.pro.roster.push({ firstName: randFrom(FIRST_NAMES), lastName: randFrom(LAST_NAMES), position: randFrom(['PG','SG','SF','PF','C']), ovr: randInt(range[0], range[1]) });
   G.player.fatigue = 0;
   G.player.morale = 80;
+  const rels = G.pro.relationships;
+  rels.coach = clamp((rels.coach||50) + randInt(-10, 5), 10, 100);
+  rels.teammates = clamp((rels.teammates||50) + randInt(-5, 5), 10, 100);
   saveGame(false);
   toast(`Season ${G.season.year} begins!`, 'success');
   updateTopbar(); navigate('home');
@@ -2396,6 +2641,426 @@ function ringHTML(value, label, size='') {
 }
 
 function esc(str) { const d=document.createElement('div'); d.textContent=str||''; return d.innerHTML; }
+
+// ═══════════════════════════════════════════════════
+// PASS 4: INJURIES, AGING, RELATIONSHIPS, TRADES,
+//         FREE AGENCY, AWARDS, MILESTONES, RETIREMENT
+// ═══════════════════════════════════════════════════
+
+function checkInjury() {
+  if (!G.pro || G.pro.currentInjury) return;
+  const roll = Math.random();
+  const fatigueBonus = (G.player.fatigue || 0) / 300;
+  const ageBonus = G.player.age > 30 ? (G.player.age - 30) * 0.004 : 0;
+  let inj = null;
+  if (roll < 0.002 + ageBonus) {
+    inj = randFrom(INJURIES.filter(i=>i.severity==='severe'));
+  } else if (roll < 0.012 + fatigueBonus + ageBonus) {
+    inj = randFrom(INJURIES.filter(i=>i.severity==='moderate'));
+  } else if (roll < 0.05 + fatigueBonus + ageBonus) {
+    inj = randFrom(INJURIES.filter(i=>i.severity==='minor'));
+  }
+  if (inj) {
+    G.pro.currentInjury = { type: inj.type, severity: inj.severity, weeksLeft: randInt(inj.minWeeks, inj.maxWeeks), attrs: inj.attrs, penalty: inj.penalty };
+    G.pro.injuries.push({ type: inj.type, severity: inj.severity, season: G.pro.seasonsPlayed, age: G.player.age, weeksOut: G.pro.currentInjury.weeksLeft });
+  }
+}
+
+function applyAging() {
+  const age = G.player.age;
+  if (age < 28) return;
+  const physKeys = ['speed','strength','stamina','vertical'];
+  const decline = age >= 36 ? 4 : age >= 33 ? 3 : age >= 30 ? 2 : 1;
+  physKeys.forEach(k => {
+    if (Math.random() < 0.65) {
+      G.player.attributes[k] = Math.max(25, (G.player.attributes[k]||25) - decline);
+    }
+  });
+  if (age >= 31) {
+    const skillKeys = ['closeShot','midRange','layup','dunk','ballHandling','passing'];
+    skillKeys.forEach(k => {
+      if (Math.random() < 0.25) {
+        G.player.attributes[k] = Math.max(25, (G.player.attributes[k]||25) - 1);
+      }
+    });
+  }
+  if (age >= 30) {
+    Object.keys(G.player.potentialCaps).forEach(k => {
+      G.player.potentialCaps[k] = Math.max(G.player.attributes[k]||25, (G.player.potentialCaps[k]||99) - decline);
+    });
+  }
+  computeRatings();
+}
+
+function updateRelationships(gameResult) {
+  if (G.phase !== 'pro') return;
+  const rels = G.pro.relationships;
+  if (!rels) return;
+  if (gameResult && !gameResult.dnp) {
+    const ppg = gameResult.pts;
+    if (ppg >= 25) { rels.fans = clamp((rels.fans||50) + 2, 0, 100); rels.coach = clamp((rels.coach||50) + 1, 0, 100); }
+    else if (ppg >= 15) { rels.fans = clamp((rels.fans||50) + 1, 0, 100); }
+    else if (ppg < 8 && (G.pro.role === 'starter' || G.pro.role === 'star')) { rels.coach = clamp((rels.coach||50) - 1, 0, 100); }
+    if (gameResult.ast >= 7) rels.teammates = clamp((rels.teammates||50) + 1, 0, 100);
+    if (gameResult.won) { rels.frontOffice = clamp((rels.frontOffice||50) + 1, 0, 100); }
+    else { rels.frontOffice = clamp((rels.frontOffice||50) - 1, 0, 100); }
+  }
+  if (G.pro.tradeRequested) {
+    rels.coach = clamp((rels.coach||50) - 2, 0, 100);
+    rels.teammates = clamp((rels.teammates||50) - 1, 0, 100);
+    rels.fans = clamp((rels.fans||50) - 2, 0, 100);
+  }
+}
+
+function checkMilestones(results) {
+  if (!G.career.milestoneFlags) G.career.milestoneFlags = {};
+  MILESTONE_DEFS.forEach(m => {
+    if (!G.career.milestoneFlags[m.id] && m.check(G)) {
+      G.career.milestoneFlags[m.id] = true;
+      G.career.milestones.push({ text: m.text, age: G.player.age, icon: m.icon });
+      if (results) results.push(`\u{1F3C6} Milestone: ${m.text}!`);
+    }
+  });
+}
+
+function showFreeAgencyOffers() {
+  const ovr = G.player.overallRating;
+  const role = G.pro.role;
+  const oldTeam = PRO_TEAMS.find(t => t.id === G.pro.team);
+
+  const offers = [];
+  const interestedTeams = [...PRO_TEAMS].sort(() => Math.random() - 0.5).slice(0, 8);
+  if (oldTeam && !interestedTeams.find(t=>t.id===oldTeam.id)) interestedTeams[0] = oldTeam;
+
+  interestedTeams.forEach(team => {
+    const needBonus = team.need.includes(G.player.position) ? 1.3 : 1.0;
+    const prestigeMod = team.prestige / 100;
+    let salary, years, offeredRole;
+    if (ovr >= 85) {
+      salary = Math.round(randInt(25, 40) * needBonus);
+      years = randInt(3, 5);
+      offeredRole = 'superstar';
+    } else if (ovr >= 78) {
+      salary = Math.round(randInt(15, 28) * needBonus);
+      years = randInt(3, 4);
+      offeredRole = 'star';
+    } else if (ovr >= 70) {
+      salary = Math.round(randInt(8, 18) * needBonus);
+      years = randInt(2, 4);
+      offeredRole = 'starter';
+    } else if (ovr >= 62) {
+      salary = Math.round(randInt(3, 10) * needBonus);
+      years = randInt(1, 3);
+      offeredRole = 'rotation';
+    } else {
+      salary = randInt(1, 4);
+      years = randInt(1, 2);
+      offeredRole = 'bench';
+    }
+    if (Math.random() < 0.5 || offers.length < 3) {
+      offers.push({ team, salary, years, role: offeredRole, needsPos: team.need.includes(G.player.position), isOldTeam: team.id === oldTeam?.id });
+    }
+  });
+
+  offers.sort((a,b) => b.salary - a.salary);
+  if (offers.length > 5) offers.length = 5;
+  if (offers.length < 2) {
+    const fallback = PRO_TEAMS.filter(t => !offers.find(o=>o.team.id===t.id)).sort((a,b) => a.prestige - b.prestige)[0];
+    offers.push({ team: fallback, salary: 1, years: 1, role: 'bench', needsPos: false, isOldTeam: false });
+  }
+
+  window._faOffers = offers;
+  window._faSelected = null;
+
+  let html = `<div class="modal-title">\u{1F4B0} Free Agency</div>
+    <div class="modal-body">Your contract has expired. These teams want to sign you:</div>`;
+
+  offers.forEach((o, i) => {
+    const roleLabel = {bench:'Bench',rotation:'Rotation',starter:'Starter',star:'Star',superstar:'Superstar'}[o.role];
+    html += `<div class="fa-offer" onclick="selectFAOffer(${i})" id="fao-${i}">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-weight:700;font-size:16px;">${o.team.name} ${o.isOldTeam?'<span class="badge badge-accent">Current</span>':''}</div>
+          <div style="font-size:12px;color:var(--text-secondary);">${o.team.city} &middot; ${o.team.conf}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-weight:700;color:var(--green);">$${o.salary}M / ${o.years}yr</div>
+          <div style="font-size:12px;color:var(--text-secondary);">${roleLabel}</div>
+          ${o.needsPos?'<span class="badge badge-green" style="font-size:10px;">Needs '+G.player.position+'</span>':''}
+        </div>
+      </div>
+    </div>`;
+  });
+
+  html += `<div class="btn-group" style="justify-content:flex-end;"><button class="btn primary" onclick="confirmFAOffer()">Sign ▶</button></div>`;
+  showModal(html);
+}
+
+function selectFAOffer(idx) {
+  window._faSelected = idx;
+  document.querySelectorAll('.fa-offer').forEach(el => el.classList.remove('selected'));
+  document.getElementById('fao-'+idx)?.classList.add('selected');
+}
+
+function confirmFAOffer() {
+  if (window._faSelected === null) { toast('Select an offer', 'error'); return; }
+  const offer = window._faOffers[window._faSelected];
+  closeModal();
+
+  const oldTeamId = G.pro.team;
+  const oldTeam = PRO_TEAMS.find(t=>t.id===oldTeamId);
+  G.pro.team = offer.team.id;
+  G.pro.contract = { salary: offer.salary, years: offer.years, type: 'Free Agent' };
+  G.pro.role = offer.role;
+
+  if (offer.team.id !== oldTeamId) {
+    const range = offer.team.prestige >= 70 ? [70,85] : offer.team.prestige >= 50 ? [62,78] : [55,72];
+    G.pro.roster = [];
+    const positions = ['PG','SG','SF','PF','C','PG','SG','SF','PF','C','SF','PG','SG','PF'];
+    positions.forEach(pos => { G.pro.roster.push({ firstName: randFrom(FIRST_NAMES), lastName: randFrom(LAST_NAMES), position: pos, ovr: randInt(range[0], range[1]) }); });
+    G.pro.relationships = { coach: 50, teammates: 45, frontOffice: 55, fans: 40 };
+    G.pro.transactions.push({ type: 'Signed', team: offer.team.name, from: oldTeam?.name||'', season: G.pro.seasonsPlayed, salary: offer.salary, years: offer.years });
+    G.career.milestones.push({ text: `Signed with ${offer.team.name} ($${offer.salary}M/${offer.years}yr)`, age: G.player.age, icon: '\u{1F4DD}' });
+  } else {
+    G.pro.transactions.push({ type: 'Re-signed', team: offer.team.name, from: '', season: G.pro.seasonsPlayed, salary: offer.salary, years: offer.years });
+    G.pro.relationships.frontOffice = clamp((G.pro.relationships.frontOffice||50) + 10, 0, 100);
+  }
+
+  saveGame(false);
+  toast(`Signed with ${offer.team.name}! $${offer.salary}M / ${offer.years} years`, 'success');
+  startNextProSeason();
+}
+
+function requestTrade() {
+  if (G.pro.tradeRequested) { toast('Trade already requested', 'info'); return; }
+  G.pro.tradeRequested = true;
+  G.pro.relationships.coach = clamp((G.pro.relationships.coach||50) - 10, 0, 100);
+  G.pro.relationships.teammates = clamp((G.pro.relationships.teammates||50) - 5, 0, 100);
+  G.pro.relationships.fans = clamp((G.pro.relationships.fans||50) - 10, 0, 100);
+  G.pro.relationships.frontOffice = clamp((G.pro.relationships.frontOffice||50) - 15, 0, 100);
+  saveGame(false);
+  toast('Trade requested! Your relationships will suffer.', 'info');
+
+  const tradeChance = G.player.overallRating >= 80 ? 0.7 : G.player.overallRating >= 70 ? 0.5 : 0.3;
+  if (Math.random() < tradeChance) {
+    setTimeout(() => executeTrade(), 500);
+  } else {
+    toast('Front office denied your trade request... for now.', 'info');
+  }
+}
+
+function executeTrade() {
+  const oldTeam = PRO_TEAMS.find(t=>t.id===G.pro.team);
+  const candidates = PRO_TEAMS.filter(t => t.id !== G.pro.team);
+  const newTeam = candidates.sort(() => Math.random() - 0.5).find(t => t.need.includes(G.player.position) || Math.random() < 0.3) || randFrom(candidates);
+
+  G.pro.tradeHistory.push({ from: oldTeam?.name||'', to: newTeam.name, season: G.pro.seasonsPlayed, age: G.player.age });
+  G.pro.transactions.push({ type: 'Traded', team: newTeam.name, from: oldTeam?.name||'', season: G.pro.seasonsPlayed });
+  G.career.milestones.push({ text: `Traded from ${oldTeam?.name||''} to ${newTeam.name}`, age: G.player.age, icon: '\u{1F504}' });
+
+  G.pro.team = newTeam.id;
+  const range = newTeam.prestige >= 70 ? [70,85] : newTeam.prestige >= 50 ? [62,78] : [55,72];
+  G.pro.roster = [];
+  const positions = ['PG','SG','SF','PF','C','PG','SG','SF','PF','C','SF','PG','SG','PF'];
+  positions.forEach(pos => { G.pro.roster.push({ firstName: randFrom(FIRST_NAMES), lastName: randFrom(LAST_NAMES), position: pos, ovr: randInt(range[0], range[1]) }); });
+  G.pro.relationships = { coach: 45, teammates: 40, frontOffice: 50, fans: 35 };
+  G.pro.tradeRequested = false;
+
+  saveGame(false);
+  toast(`Traded to the ${newTeam.name}!`, 'success');
+  updateTopbar(); navigate('home');
+}
+
+function retirePlayer() {
+  closeModal();
+  G.phase = 'retired';
+  const team = PRO_TEAMS.find(t=>t.id===G.pro.team);
+  G.career.milestones.push({ text: `Retired at age ${G.player.age} after ${G.pro.seasonsPlayed} pro seasons`, age: G.player.age, icon: '\u{1F44B}' });
+  checkMilestones(null);
+  saveGame(false);
+
+  const totalAwards = G.career.awards.length;
+  const allStars = G.career.awards.filter(a=>a.name==='All-Star').length;
+  const mvps = G.career.awards.filter(a=>a.name==='MVP').length;
+  const rings = G.career.awards.filter(a=>a.name==='Championship').length;
+
+  let legacy = 'Journeyman';
+  if (mvps >= 3 && rings >= 2) legacy = 'All-Time Great';
+  else if (mvps >= 1 || (allStars >= 8 && rings >= 1)) legacy = 'Hall of Famer';
+  else if (allStars >= 5) legacy = 'Franchise Legend';
+  else if (allStars >= 3) legacy = 'Star Player';
+  else if (G.pro.seasonsPlayed >= 10) legacy = 'Respected Veteran';
+
+  let html = `<div class="modal-title">\u{1F44B} Career Over — ${esc(G.player.firstName)} ${esc(G.player.lastName)}</div>
+    <div style="text-align:center;padding:20px;">
+      <div style="font-size:32px;margin-bottom:8px;">${legacy === 'All-Time Great' ? '\u{1F451}' : legacy === 'Hall of Famer' ? '\u{1F31F}' : legacy === 'Franchise Legend' ? '\u{2B50}' : '\u{1F3C0}'}</div>
+      <div style="font-size:24px;font-weight:800;color:var(--accent);margin-bottom:4px;">${legacy}</div>
+      <div style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;">${G.pro.seasonsPlayed} Pro Seasons &middot; Retired at ${G.player.age}</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;text-align:center;margin-bottom:20px;">
+        ${statBox('Games', G.career.totalGames)}
+        ${statBox('Points', G.career.totalPoints)}
+        ${statBox('Rebounds', G.career.totalRebounds)}
+        ${statBox('Assists', G.career.totalAssists)}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;text-align:center;margin-bottom:20px;">
+        ${statBox('All-Stars', allStars)}
+        ${statBox('MVPs', mvps)}
+        ${statBox('Rings', rings)}
+        ${statBox('Awards', totalAwards)}
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);">Your career is complete. Review your legacy on the Stats, Awards, and Milestones pages.</div>
+    </div>
+    <div class="btn-group" style="justify-content:center;">
+      <button class="btn primary" onclick="closeModal();updateTopbar();navigate('stats');">View Career Stats ▶</button>
+    </div>`;
+  showModal(html, true);
+}
+
+// ─── CONTRACTS PAGE ───
+
+function renderContractsPage(c) {
+  if (G.phase !== 'pro' && G.phase !== 'retired') {
+    c.innerHTML = `<div class="card"><div class="card-title">Contracts</div><div style="font-size:13px;color:var(--text-muted);text-align:center;padding:40px 0;">Contract information is available during your pro career.</div></div>`;
+    return;
+  }
+  const team = PRO_TEAMS.find(t=>t.id===G.pro.team);
+  const contract = G.pro.contract;
+  const canTrade = G.phase === 'pro' && !G.pro.tradeRequested && G.pro.seasonsPlayed > 1;
+
+  c.innerHTML = `
+    ${contract ? `<div class="card"><div class="card-title">Current Contract</div>
+      ${meterRow('Team', team?.name || 'Free Agent')}
+      ${meterRow('Type', contract.type)}
+      ${meterRow('Salary', '$' + contract.salary + 'M / year')}
+      ${meterRow('Years Remaining', contract.years + (contract.years <= 1 ? ' (expiring)' : ''))}
+      ${meterRow('Total Value', '$' + (contract.salary * contract.years) + 'M')}
+    </div>` : '<div class="card"><div class="card-title">No Contract</div><div style="font-size:13px;color:var(--text-muted);">You are currently a free agent.</div></div>'}
+    <div class="card"><div class="card-title">Career Earnings</div>
+      <div style="font-size:13px;color:var(--text-secondary);">
+        ${G.pro.transactions.filter(t=>t.salary).map(t => `<div style="padding:4px 0;">${t.team}: $${t.salary}M x ${t.years}yr = $${t.salary*t.years}M</div>`).join('') || 'No contract history yet.'}
+      </div>
+    </div>
+    ${canTrade ? `<div class="card"><div class="card-title">Trade Request</div>
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Requesting a trade will damage your relationships with the current team.</div>
+      <button class="btn danger" onclick="requestTrade()">Request Trade</button>
+    </div>` : ''}
+    ${G.pro.tradeRequested ? `<div class="card" style="border-color:var(--yellow);"><div class="card-title" style="color:var(--yellow);">Trade Requested</div>
+      <div style="font-size:13px;color:var(--text-secondary);">The front office is considering your request...</div>
+    </div>` : ''}`;
+}
+
+// ─── TRANSACTIONS PAGE ───
+
+function renderTransactionsPage(c) {
+  const txns = G.pro.transactions || [];
+  const trades = G.pro.tradeHistory || [];
+  const injuries = G.pro.injuries || [];
+
+  if (txns.length === 0 && trades.length === 0 && injuries.length === 0) {
+    c.innerHTML = `<div class="card"><div class="card-title">Transactions</div><div style="font-size:13px;color:var(--text-muted);text-align:center;padding:40px 0;">No transactions yet.</div></div>`;
+    return;
+  }
+
+  let html = '';
+  if (txns.length > 0) {
+    html += `<div class="card"><div class="card-title">Contract & Trade History</div>
+      <table class="stats-table"><thead><tr><th>Type</th><th>Team</th><th>From</th><th>Season</th><th>Details</th></tr></thead><tbody>
+      ${txns.map(t => `<tr>
+        <td><span class="badge ${t.type==='Traded'?'badge-yellow':t.type==='Signed'?'badge-green':'badge-accent'}">${t.type}</span></td>
+        <td>${esc(t.team)}</td><td>${esc(t.from||'--')}</td><td>${t.season}</td>
+        <td>${t.salary ? '$'+t.salary+'M/'+t.years+'yr' : '--'}</td>
+      </tr>`).join('')}
+      </tbody></table></div>`;
+  }
+
+  if (injuries.length > 0) {
+    html += `<div class="card"><div class="card-title">Injury History</div>
+      <table class="stats-table"><thead><tr><th>Injury</th><th>Severity</th><th>Season</th><th>Age</th><th>Weeks Out</th></tr></thead><tbody>
+      ${injuries.map(inj => `<tr>
+        <td>${esc(inj.type)}</td>
+        <td><span class="badge ${inj.severity==='severe'?'badge-red':inj.severity==='moderate'?'badge-yellow':'badge-accent'}">${inj.severity}</span></td>
+        <td>${inj.season}</td><td>${inj.age}</td><td>${inj.weeksOut}</td>
+      </tr>`).join('')}
+      </tbody></table></div>`;
+  }
+
+  c.innerHTML = html;
+}
+
+// ─── RELATIONSHIPS PAGE ───
+
+function renderRelationshipsPage(c) {
+  if (G.phase !== 'pro' && G.phase !== 'retired') {
+    c.innerHTML = `<div class="card"><div class="card-title">Relationships</div><div style="font-size:13px;color:var(--text-muted);text-align:center;padding:40px 0;">Relationship tracking begins in your pro career.</div></div>`;
+    return;
+  }
+  const rels = G.pro.relationships || { coach:50, teammates:50, frontOffice:50, fans:50 };
+  const team = PRO_TEAMS.find(t=>t.id===G.pro.team);
+
+  c.innerHTML = `<div class="card"><div class="card-title">Relationships — ${team?.name||'Team'}</div>
+    <div style="margin-bottom:20px;">
+      ${relMeterHTML('Coach', rels.coach)}
+      ${relMeterHTML('Teammates', rels.teammates)}
+      ${relMeterHTML('Front Office', rels.frontOffice)}
+      ${relMeterHTML('Fans', rels.fans)}
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);">
+      <div style="margin-bottom:4px;font-weight:600;">How Relationships Change:</div>
+      <div>• Good performances boost Coach and Fan ratings</div>
+      <div>• High assists improve Teammate chemistry</div>
+      <div>• Winning improves Front Office trust</div>
+      <div>• Trade requests damage all relationships</div>
+      <div>• Changing teams resets relationships</div>
+    </div>
+  </div>
+  <div class="card"><div class="card-title">Relationship Effects</div>
+    <div style="font-size:13px;color:var(--text-secondary);">
+      <div style="padding:6px 0;border-bottom:1px solid var(--border);">
+        <strong style="color:${rels.coach>=70?'var(--green)':rels.coach>=40?'var(--yellow)':'var(--red)'};">Coach (${rels.coach})</strong>:
+        ${rels.coach>=70?'Coach trusts you with key plays and late-game situations.':rels.coach>=40?'Coach gives you standard opportunities.':'Coach may reduce your minutes and role.'}
+      </div>
+      <div style="padding:6px 0;border-bottom:1px solid var(--border);">
+        <strong style="color:${rels.teammates>=70?'var(--green)':rels.teammates>=40?'var(--yellow)':'var(--red)'};">Teammates (${rels.teammates})</strong>:
+        ${rels.teammates>=70?'Great chemistry — teammates look for you often.':rels.teammates>=40?'Teammates respect your game.':'Tension in the locker room affecting morale.'}
+      </div>
+      <div style="padding:6px 0;border-bottom:1px solid var(--border);">
+        <strong style="color:${rels.frontOffice>=70?'var(--green)':rels.frontOffice>=40?'var(--yellow)':'var(--red)'};">Front Office (${rels.frontOffice})</strong>:
+        ${rels.frontOffice>=70?'Management sees you as a franchise cornerstone.':rels.frontOffice>=40?'Management is content with your contributions.':'Management may consider trading you.'}
+      </div>
+      <div style="padding:6px 0;">
+        <strong style="color:${rels.fans>=70?'var(--green)':rels.fans>=40?'var(--yellow)':'var(--red)'};">Fans (${rels.fans})</strong>:
+        ${rels.fans>=70?'Fan favorite — the crowd energizes your play.':rels.fans>=40?'Fans appreciate your effort.':'Fans are getting restless with your performance.'}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ─── MILESTONES PAGE ───
+
+function renderMilestonesPage(c) {
+  const milestones = G.career.milestones || [];
+  if (milestones.length === 0) {
+    c.innerHTML = `<div class="card"><div class="card-title">Career Milestones</div><div style="font-size:13px;color:var(--text-muted);text-align:center;padding:40px 0;">No milestones reached yet. Keep playing!</div></div>`;
+    return;
+  }
+
+  let achieved = milestones.filter(m => MILESTONE_DEFS.find(md => md.text === m.text) || m.text.startsWith('Entered') || m.text.startsWith('Signed') || m.text.startsWith('Traded') || m.text.startsWith('Retired'));
+
+  c.innerHTML = `<div class="card"><div class="card-title">Career Milestones (${milestones.length})</div>
+    ${milestones.map(m => `<div class="milestone-item">
+      <span class="m-icon">${m.icon||'\u{2705}'}</span>
+      <span class="m-text">${esc(m.text)}</span>
+      <span class="m-age">Age ${m.age}</span>
+    </div>`).join('')}
+  </div>
+  <div class="card"><div class="card-title">Upcoming Milestones</div>
+    ${MILESTONE_DEFS.filter(m => !G.career.milestoneFlags?.[m.id]).slice(0, 5).map(m => `<div class="milestone-item" style="opacity:0.5;">
+      <span class="m-icon">${m.icon}</span>
+      <span class="m-text">${m.text}</span>
+      <span class="m-age" style="color:var(--text-muted);">Not yet</span>
+    </div>`).join('') || '<div style="font-size:13px;color:var(--green);padding:12px;">All milestones achieved!</div>'}
+  </div>`;
+}
 
 // ─── INIT ───
 
