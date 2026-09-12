@@ -339,7 +339,7 @@ body { font-family: var(--font); background: var(--bg-darkest); color: var(--tex
     <div id="continue-slots"></div>
     <div class="title-import" onclick="importSave()">Import Save File</div>
   </div>
-  <div class="title-version">v0.5.0 &mdash; Final</div>
+  <div class="title-version">v0.6.0 &mdash; V2 Pass 1</div>
 </div>
 
 <div id="creation-screen" class="hidden" style="position:fixed;inset:0;z-index:900;background:var(--bg-darkest);overflow-y:auto;">
@@ -353,7 +353,8 @@ body { font-family: var(--font); background: var(--bg-darkest); color: var(--tex
       <div class="wizard-step" data-step="2">2. Physical</div>
       <div class="wizard-step" data-step="3">3. Archetype</div>
       <div class="wizard-step" data-step="4">4. Attributes</div>
-      <div class="wizard-step" data-step="5">5. High School</div>
+      <div class="wizard-step" data-step="5">5. Potential</div>
+      <div class="wizard-step" data-step="6">6. High School</div>
     </div>
     <div id="step-1" class="card">
       <div class="card-title">Personal Info</div>
@@ -388,10 +389,16 @@ body { font-family: var(--font); background: var(--bg-darkest); color: var(--tex
       <div class="btn-group" style="justify-content:flex-end;"><button class="btn" onclick="creationNext(3)">Back</button><button class="btn primary" onclick="creationNext(5)">Next</button></div>
     </div>
     <div id="step-5" class="card hidden">
+      <div class="card-title">Choose Your Potential</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;">Your potential tier determines how high your attributes can grow. Higher tiers mean higher ceilings but lower tiers offer a greater challenge.</p>
+      <div id="potential-tier-options"></div>
+      <div class="btn-group" style="justify-content:flex-end;"><button class="btn" onclick="creationNext(4)">Back</button><button class="btn primary" onclick="creationNext(6)">Next</button></div>
+    </div>
+    <div id="step-6" class="card hidden">
       <div class="card-title">Choose Your High School</div>
       <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;">Where you play affects your exposure and competition level.</p>
       <div id="hs-options"></div>
-      <div class="btn-group" style="justify-content:flex-end;"><button class="btn" onclick="creationNext(4)">Back</button><button class="btn primary" onclick="finishCreation()">Start Career</button></div>
+      <div class="btn-group" style="justify-content:flex-end;"><button class="btn" onclick="creationNext(5)">Back</button><button class="btn primary" onclick="finishCreation()">Start Career</button></div>
     </div>
   </div>
 </div>
@@ -443,7 +450,7 @@ body { font-family: var(--font); background: var(--bg-darkest); color: var(--tex
 
 <script>
 // ═══════════════════════════════════════════════════
-// GAME ENGINE — Hardwood Legacy v0.5
+// GAME ENGINE — Hardwood Legacy v0.6
 // ═══════════════════════════════════════════════════
 
 const SAVE_KEY_PREFIX = 'hardwood_legacy_v1_slot_';
@@ -480,18 +487,67 @@ const ATTRIBUTES = [
 
 const ARCHETYPES = [
   { id: 'sharpshooter', name: 'Sharpshooter', icon: '\u{1F3AF}', desc: 'Elite shooter, deadly from range',
-    boosts: { threePoint: 15, midRange: 12, freeThrow: 10, closeShot: 5, ballHandling: 3 }, potentialMod: 0 },
+    boosts: { threePoint: 15, midRange: 12, freeThrow: 10, closeShot: 5, ballHandling: 3 } },
   { id: 'slasher', name: 'Slasher', icon: '⚡', desc: 'Attacks the rim with speed and power',
-    boosts: { layup: 14, dunk: 12, speed: 10, closeShot: 8, ballHandling: 5 }, potentialMod: 0 },
+    boosts: { layup: 14, dunk: 12, speed: 10, closeShot: 8, ballHandling: 5 } },
   { id: 'playmaker', name: 'Playmaker', icon: '\u{1F3C0}', desc: 'Court vision and ball handling maestro',
-    boosts: { passing: 15, ballHandling: 14, speed: 8, midRange: 5, perimeterDef: 3 }, potentialMod: 0 },
+    boosts: { passing: 15, ballHandling: 14, speed: 8, midRange: 5, perimeterDef: 3 } },
   { id: 'rimProtector', name: 'Rim Protector', icon: '\u{1F6E1}', desc: 'Anchor the defense and protect the paint',
-    boosts: { block: 15, interiorDef: 14, rebounding: 10, strength: 8, closeShot: 3 }, potentialMod: -2 },
+    boosts: { block: 15, interiorDef: 14, rebounding: 10, strength: 8, closeShot: 3 } },
   { id: 'threeAndD', name: '3-and-D', icon: '\u{1F512}', desc: 'Lock down defenders and shoot the three',
-    boosts: { perimeterDef: 14, threePoint: 12, steal: 8, stamina: 6, speed: 5 }, potentialMod: -1 },
+    boosts: { perimeterDef: 14, threePoint: 12, steal: 8, stamina: 6, speed: 5 } },
   { id: 'postScorer', name: 'Post Scorer', icon: '\u{1F4AA}', desc: 'Dominate the low post with skill and strength',
-    boosts: { closeShot: 14, strength: 12, rebounding: 10, interiorDef: 6, midRange: 5 }, potentialMod: -1 },
+    boosts: { closeShot: 14, strength: 12, rebounding: 10, interiorDef: 6, midRange: 5 } },
 ];
+
+const POTENTIAL_TIERS = [
+  { id: 'franchise', name: 'Franchise', icon: '\u{1F451}', color: '#f59e0b', capRange: [92, 99],
+    desc: 'Generational talent. Can reach 99 OVR.' },
+  { id: 'allstar', name: 'All-Star', icon: '\u{2B50}', color: '#f97316', capRange: [86, 94],
+    desc: 'Perennial All-Star ceiling. Elite upside.' },
+  { id: 'aboveAvgStarter', name: 'Above-Avg Starter', icon: '\u{1F525}', color: '#ef4444', capRange: [79, 88],
+    desc: 'Reliable starter with room to grow into a star.' },
+  { id: 'starter', name: 'Starter', icon: '\u{1F3C0}', color: '#8b5cf6', capRange: [73, 82],
+    desc: 'Solid starter. Dependable but not flashy.' },
+  { id: 'rotation', name: 'Rotation', icon: '\u{1F504}', color: '#3b82f6', capRange: [66, 76],
+    desc: 'Rotation player. Limited ceiling but can contribute.' },
+  { id: 'bench', name: 'Bench', icon: '\u{1FA91}', color: '#6b7280', capRange: [58, 69],
+    desc: 'End of bench. Will need to outwork your talent.' },
+  { id: 'fringe', name: 'Fringe', icon: '\u{1F4A7}', color: '#9ca3af', capRange: [50, 62],
+    desc: 'Fringe roster player. Every point is earned.' },
+  { id: 'campBody', name: 'Camp Body', icon: '\u{1F6AB}', color: '#d1d5db', capRange: [42, 55],
+    desc: 'Camp invite only. Pure challenge mode.' },
+];
+
+function getMotivationLabel(mot) {
+  if (mot >= 80) return { label: 'Elite', color: '#3b82f6' };
+  if (mot >= 60) return { label: 'High', color: '#22c55e' };
+  if (mot >= 40) return { label: 'Average', color: '#eab308' };
+  if (mot >= 20) return { label: 'Low', color: '#ef4444' };
+  return { label: 'Checked Out', color: '#991b1b' };
+}
+
+function getWeeklySessions() {
+  if (!G) return 7;
+  const phase = G.phase;
+  let base;
+  if (phase === 'highschool') base = 6;
+  else if (phase === 'college') base = 7;
+  else if (phase === 'pro') base = 8;
+  else return 7;
+  const age = G.player.age || 18;
+  if (phase === 'pro') {
+    if (age >= 34) base -= 2;
+    else if (age >= 30) base -= 1;
+  }
+  const stamina = G.player.attributes?.stamina || 25;
+  if (stamina >= 80) base += 2;
+  else if (stamina >= 60) base += 1;
+  const health = G.player.fatigue || 0;
+  if (health >= 80) base -= 2;
+  else if (health >= 50) base -= 1;
+  return clamp(base, 4, 12);
+}
 
 const HIGH_SCHOOLS = [
   { id: 'powerhouse', name: 'Oak Hill Academy', type: 'National Powerhouse',
@@ -712,7 +768,8 @@ function defaultState() {
       firstName: '', lastName: '', hometown: '',
       heightFt: 6, heightIn: 3, weight: 195,
       position: 'PG', archetype: 'sharpshooter',
-      attributes: {}, potential: 0, potentialCaps: {},
+      attributes: {}, potential: 0, potentialTier: 'starter', potentialCaps: {},
+      motivation: 70,
       age: 15, overallRating: 0, offenseRating: 0, defenseRating: 0,
       morale: 80, fatigue: 0,
     },
@@ -856,15 +913,15 @@ function goTitleScreen() { showTitleScreen(); }
 
 // ─── CHARACTER CREATION ───
 
-let creationStep = 1, selectedArchetype = null, selectedHS = null, attrPoints = 15, tempAttrs = {};
+let creationStep = 1, selectedArchetype = null, selectedHS = null, selectedTier = 'starter', attrPoints = 15, tempAttrs = {};
 
 function showCreationScreen() {
   document.getElementById('title-screen').classList.add('hidden');
   document.getElementById('creation-screen').classList.remove('hidden');
   document.getElementById('app').classList.remove('active');
-  creationStep = 1; selectedArchetype = null; selectedHS = null; attrPoints = 15; tempAttrs = {};
+  creationStep = 1; selectedArchetype = null; selectedHS = null; selectedTier = 'starter'; attrPoints = 15; tempAttrs = {};
   ATTRIBUTES.forEach(a => { tempAttrs[a.key] = 25; });
-  renderArchetypeGrid(); renderHSOptions(); updateCreationStep(); setupPositionHint();
+  renderArchetypeGrid(); renderHSOptions(); renderPotentialTiers(); updateCreationStep(); setupPositionHint();
 }
 function setupPositionHint() {
   const sel = document.getElementById('cr-position'), hint = document.getElementById('pos-hint');
@@ -877,9 +934,10 @@ function validateStep(step) {
   return true;
 }
 function updateCreationStep() {
-  for(let i=1;i<=5;i++) document.getElementById('step-'+i).classList.toggle('hidden',i!==creationStep);
+  for(let i=1;i<=6;i++) document.getElementById('step-'+i).classList.toggle('hidden',i!==creationStep);
   document.querySelectorAll('.wizard-step').forEach(el=>{const s=parseInt(el.dataset.step);el.classList.toggle('active',s===creationStep);el.classList.toggle('done',s<creationStep);});
   if(creationStep===4){applyArchetypeToAttrs();renderAttrList();}
+  if(creationStep===5){renderPotentialTiers();}
 }
 function renderArchetypeGrid() {
   document.getElementById('archetype-grid').innerHTML = ARCHETYPES.map(a=>`<div class="archetype-card ${selectedArchetype===a.id?'selected':''}" onclick="selectArchetype('${a.id}')"><div class="arch-icon">${a.icon}</div><div class="arch-name">${a.name}</div><div class="arch-desc">${a.desc}</div></div>`).join('');
@@ -906,6 +964,19 @@ function renderHSOptions() {
   document.getElementById('hs-options').innerHTML = HIGH_SCHOOLS.map(hs=>`<div class="hs-option ${selectedHS===hs.id?'selected':''}" onclick="selectHS('${hs.id}')"><div class="hs-name">${hs.name}</div><div style="font-size:12px;color:var(--accent);font-weight:600;margin-top:2px;">${hs.type}</div><div class="hs-detail">${hs.detail}</div></div>`).join('');
 }
 function selectHS(id) { selectedHS = id; renderHSOptions(); }
+function renderPotentialTiers() {
+  document.getElementById('potential-tier-options').innerHTML = POTENTIAL_TIERS.map(t =>
+    `<div class="hs-option ${selectedTier===t.id?'selected':''}" onclick="selectTier('${t.id}')" style="border-left:3px solid ${t.color};">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:20px;">${t.icon}</span>
+        <div class="hs-name" style="color:${t.color};">${t.name}</div>
+        <span style="font-size:11px;color:var(--text-muted);margin-left:auto;">Cap: ${t.capRange[0]}-${t.capRange[1]}</span>
+      </div>
+      <div class="hs-detail">${t.desc}</div>
+    </div>`
+  ).join('');
+}
+function selectTier(id) { selectedTier = id; renderPotentialTiers(); }
 
 function finishCreation() {
   if(!selectedHS){toast('Choose a high school','error');return;}
@@ -920,10 +991,16 @@ function finishCreation() {
   p.position = document.getElementById('cr-position').value;
   p.archetype = selectedArchetype;
   p.attributes = { ...tempAttrs };
-  const arch = ARCHETYPES.find(a=>a.id===selectedArchetype);
-  const basePot = 3 + Math.floor(Math.random() * 2);
-  p.potential = clamp(basePot + (arch?.potentialMod||0) + (Math.random()<0.3?1:0), 1, 5);
-  ATTRIBUTES.forEach(attr => { p.potentialCaps[attr.key] = Math.min(99, p.potential * 18 + randInt(-2, 3)); });
+  p.potentialTier = selectedTier;
+  p.motivation = 70;
+  const tier = POTENTIAL_TIERS.find(t=>t.id===selectedTier);
+  const [capLo, capHi] = tier.capRange;
+  ATTRIBUTES.forEach(attr => {
+    const archBoost = ARCHETYPES.find(a=>a.id===selectedArchetype)?.boosts[attr.key] || 0;
+    const tierBonus = Math.round(archBoost > 8 ? (capHi - capLo) * 0.4 : archBoost > 3 ? (capHi - capLo) * 0.2 : 0);
+    p.potentialCaps[attr.key] = clamp(randInt(capLo, capHi) + tierBonus, capLo, 99);
+  });
+  p.potential = Math.round((capLo + capHi) / 2 / 18);
   G.highSchool.school = selectedHS;
   G.season.schedule = generateSchedule('highschool');
   computeRatings(); saveGame(false); enterGame();
@@ -958,6 +1035,19 @@ function enterGame() {
   if (!G.pro.prevOvr) G.pro.prevOvr = null;
   if (!G.career.milestoneFlags) G.career.milestoneFlags = {};
   if (!G.pro.relationships) G.pro.relationships = { coach:50, teammates:50, frontOffice:50, fans:50 };
+  if (!G.player.potentialTier) {
+    const oldPot = G.player.potential || 3;
+    const tierMap = { 1: 'campBody', 2: 'fringe', 3: 'rotation', 4: 'starter', 5: 'allstar' };
+    G.player.potentialTier = tierMap[clamp(oldPot, 1, 5)] || 'starter';
+    const tier = POTENTIAL_TIERS.find(t=>t.id===G.player.potentialTier);
+    if (tier) {
+      ATTRIBUTES.forEach(attr => {
+        const oldCap = G.player.potentialCaps[attr.key] || 50;
+        G.player.potentialCaps[attr.key] = Math.max(oldCap, randInt(tier.capRange[0], tier.capRange[1]));
+      });
+    }
+  }
+  if (G.player.motivation === undefined) G.player.motivation = 70;
   if (G.pro.relationships.teammate1 !== undefined) {
     G.pro.relationships = { coach: G.pro.relationships.coach||50, teammates: G.pro.relationships.teammate1||50, frontOffice: G.pro.relationships.frontOffice||50, fans: G.pro.relationships.fans||50 };
   }
@@ -1038,7 +1128,7 @@ function renderHomePage(c) {
         ${meterRow('Season', G.season.year)}
         ${meterRow('Week', G.season.week+' / '+G.season.maxWeeks)}
         ${meterRow('Record', record.w+'-'+record.l)}
-        ${meterRow('Potential', '★'.repeat(p.potential)+'☆'.repeat(5-p.potential))}
+        ${meterRow('Potential', '<span style="color:'+(POTENTIAL_TIERS.find(t=>t.id===p.potentialTier)?.color||'var(--text-secondary)')+';font-weight:700;">'+(POTENTIAL_TIERS.find(t=>t.id===p.potentialTier)?.name||'Unknown')+'</span>')}
         ${G.phase==='college'?meterRow('Role',roleLabel):''}
         ${G.phase==='college'?meterRow('Draft Stock',G.college.mockDraft||'--'):''}
         <div style="margin-top:16px;"><button class="btn primary" onclick="navigate('development')" style="width:100%;">Go to Development →</button></div>
@@ -1335,7 +1425,8 @@ function renderPlayerPage(c) {
           ${POSITIONS[p.position]?.label} &middot; ${p.heightFt}'${p.heightIn}" &middot; ${p.weight} lbs<br>
           ${esc(p.hometown)} &middot; Age ${p.age}<br>
           Archetype: ${ARCHETYPES.find(a=>a.id===p.archetype)?.name||''}<br>
-          Potential: ${'★'.repeat(p.potential)}${'☆'.repeat(5-p.potential)}
+          Potential: <span style="color:${POTENTIAL_TIERS.find(t=>t.id===p.potentialTier)?.color||'var(--text-secondary)'};font-weight:700;">${POTENTIAL_TIERS.find(t=>t.id===p.potentialTier)?.name||'Unknown'}</span>
+          &middot; Motivation: <span style="color:${getMotivationLabel(p.motivation||70).color};font-weight:700;">${getMotivationLabel(p.motivation||70).label}</span> (${p.motivation||70})
           ${G.phase==='pro'&&G.pro.team?'<br>Team: '+PRO_TEAMS.find(t=>t.id===G.pro.team)?.name:''}
         </div>
       </div>
@@ -1364,20 +1455,24 @@ function renderDevelopmentPage(c) {
   const names = ['Practice', 'Film Study', 'Strength & Conditioning', 'Social / Rest'];
   const icons = ['\u{1F3C0}','\u{1F4FA}','\u{1F4AA}','\u{1F6CC}'];
   const descs = ['Improve shooting, ball handling, and skill attributes','Boost basketball IQ (small chance to improve any attribute)','Build speed, strength, stamina, and vertical','Recover fatigue, prevent burnout, boost morale'];
-  if(!G._weekAlloc) G._weekAlloc=[3,1,1,2];
+  const maxSessions = getWeeklySessions();
+  if(!G._weekAlloc) G._weekAlloc=[Math.floor(maxSessions*0.4),1,1,maxSessions-Math.floor(maxSessions*0.4)-2];
   const alloc = G._weekAlloc, total = alloc.reduce((s,v)=>s+v,0);
+  if (total > maxSessions) { const excess = total - maxSessions; alloc[3] = Math.max(0, alloc[3] - excess); }
   const seasonOver = G.season.week > G.season.maxWeeks;
+  const motInfo = getMotivationLabel(G.player.motivation||70);
 
   c.innerHTML = `
     ${inj ? `<div class="injury-banner"><span class="inj-icon">\u{1FA79}</span><div class="inj-text"><strong>${esc(inj.type)}</strong> — Only film study is available while injured.</div><span class="inj-weeks">${inj.weeksLeft} wk${inj.weeksLeft!==1?'s':''}</span></div>` : ''}
     <div class="card">
       <div class="card-title">Weekly Training Plan &mdash; Week ${G.season.week}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <span style="font-size:13px;color:var(--text-secondary);">Allocate sessions: <strong>${total}</strong> / 7</span>
-        <span style="font-size:12px;color:var(--text-muted);">Fatigue: ${G.player.fatigue||0}% &middot; Morale: ${G.player.morale||80}%</span>
+        <span style="font-size:13px;color:var(--text-secondary);">Allocate sessions: <strong>${alloc.reduce((s,v)=>s+v,0)}</strong> / ${maxSessions}</span>
+        <span style="font-size:12px;color:var(--text-muted);">Fatigue: ${G.player.fatigue||0}% &middot; Morale: ${G.player.morale||80}% &middot; Motivation: <span style="color:${motInfo.color};">${motInfo.label}</span></span>
       </div>
       ${names.map((name,i)=>{
         const locked = inj && (i === 0 || i === 2);
+        const curTotal = alloc.reduce((s,v)=>s+v,0);
         return `
         <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);${locked?'opacity:0.4;':''}">
           <span style="font-size:20px;width:32px;text-align:center;">${icons[i]}</span>
@@ -1385,7 +1480,7 @@ function renderDevelopmentPage(c) {
           <div style="display:flex;align-items:center;gap:8px;">
             <button class="attr-btn" onclick="adjAlloc(${i},-1)" ${alloc[i]<=0||locked?'disabled':''}>-</button>
             <span style="font-size:18px;font-weight:700;width:28px;text-align:center;">${locked?0:alloc[i]}</span>
-            <button class="attr-btn" onclick="adjAlloc(${i},1)" ${total>=7||locked?'disabled':''}>+</button>
+            <button class="attr-btn" onclick="adjAlloc(${i},1)" ${curTotal>=maxSessions||locked?'disabled':''}>+</button>
           </div>
         </div>`;}).join('')}
       <div class="btn-group" style="justify-content:space-between;align-items:center;">
@@ -1400,7 +1495,7 @@ function renderDevelopmentPage(c) {
     <div class="card" id="week-results" style="display:none;"><div class="card-title">Results</div><div id="week-results-content"></div></div>
   `;
 }
-function adjAlloc(i,d) { if(!G._weekAlloc)G._weekAlloc=[3,1,1,2]; const a=G._weekAlloc,t=a.reduce((s,v)=>s+v,0); if(d>0&&t>=7)return; if(d<0&&a[i]<=0)return; a[i]+=d; renderDevelopmentPage(document.getElementById('main-content')); }
+function adjAlloc(i,d) { if(!G._weekAlloc)G._weekAlloc=[3,1,1,2]; const a=G._weekAlloc,t=a.reduce((s,v)=>s+v,0),max=getWeeklySessions(); if(d>0&&t>=max)return; if(d<0&&a[i]<=0)return; a[i]+=d; renderDevelopmentPage(document.getElementById('main-content')); }
 
 function getNextGameInfo() {
   const g = G.season.schedule[G.season.nextGameIdx];
@@ -1429,9 +1524,18 @@ function simWeek() {
   }
 
   const restSessions = alloc[3];
-  G.player.fatigue = clamp((G.player.fatigue||0) + (injured ? -8 : (7 - restSessions) * 2 - restSessions * 5), 0, 100);
+  const maxSess = getWeeklySessions();
+  const workSessions = alloc[0] + alloc[1] + alloc[2];
+  G.player.fatigue = clamp((G.player.fatigue||0) + (injured ? -8 : workSessions * 2 - restSessions * 5), 0, 100);
   G.player.morale = clamp((G.player.morale||80) + restSessions * 3 - (G.player.fatigue > 60 ? 5 : 0) - (injured ? 3 : 0), 20, 100);
   if(restSessions>=2 && !injured) results.push('Well-rested (fatigue -' + (restSessions*5) + '%)');
+
+  let motDelta = 0;
+  if (G.player.morale >= 70) motDelta += 1;
+  if (G.player.morale <= 30) motDelta -= 2;
+  if (G.player.fatigue >= 70) motDelta -= 1;
+  if (restSessions >= 3) motDelta += 1;
+  G.player.motivation = clamp((G.player.motivation||70) + motDelta, 0, 100);
 
   if (phase === 'pro' && G.pro.currentInjury) {
     G.pro.currentInjury.weeksLeft--;
@@ -1507,8 +1611,11 @@ function simWeekSilent() {
   } else {
     for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key;if(Math.random()<0.2&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+1);}
   }
-  G.player.fatigue=clamp((G.player.fatigue||0)+(injured?-8:(7-alloc[3])*2-alloc[3]*5),0,100);
+  const workSess=alloc[0]+alloc[1]+alloc[2];
+  G.player.fatigue=clamp((G.player.fatigue||0)+(injured?-8:workSess*2-alloc[3]*5),0,100);
   G.player.morale=clamp((G.player.morale||80)+alloc[3]*3-(G.player.fatigue>60?5:0)-(injured?3:0),20,100);
+  let motD=0; if(G.player.morale>=70)motD+=1; if(G.player.morale<=30)motD-=2; if(G.player.fatigue>=70)motD-=1; if(alloc[3]>=3)motD+=1;
+  G.player.motivation=clamp((G.player.motivation||70)+motD,0,100);
   if (G.phase === 'pro' && G.pro.currentInjury) {
     G.pro.currentInjury.weeksLeft--;
     if (G.pro.currentInjury.weeksLeft <= 0) G.pro.currentInjury = null;
