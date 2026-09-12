@@ -181,6 +181,7 @@ body { font-family: var(--font); background: var(--bg-darkest); color: var(--tex
 .modal { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; }
 .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
 .modal-body { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; }
+.modal.wide { max-width: 800px; }
 
 .hidden { display: none !important; }
 .text-accent { color: var(--accent); }
@@ -212,6 +213,25 @@ body { font-family: var(--font); background: var(--bg-darkest); color: var(--tex
 .draft-stock-track { flex: 1; height: 10px; background: rgba(255,255,255,0.08); border-radius: 5px; position: relative; overflow: hidden; }
 .draft-stock-fill { height: 100%; border-radius: 5px; transition: width 0.5s; }
 .draft-stock-label { font-size: 12px; font-weight: 700; min-width: 80px; text-align: right; }
+
+.combine-drill { padding: 14px; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; }
+.combine-drill .drill-name { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+.combine-drill .drill-desc { font-size: 12px; color: var(--text-secondary); }
+.combine-drill .drill-result { margin-top: 8px; font-size: 13px; font-weight: 600; }
+
+.draft-pick-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; transition: background 0.2s; }
+.draft-pick-row.you { background: var(--accent-dim); border: 1px solid var(--accent); border-radius: var(--radius-sm); }
+.draft-pick-row .pick-num { width: 36px; font-weight: 800; color: var(--text-muted); font-size: 15px; }
+.draft-pick-row .pick-team { width: 140px; font-weight: 600; }
+.draft-pick-row .pick-player { flex: 1; }
+.draft-pick-row .pick-pos { width: 40px; color: var(--text-secondary); }
+.draft-pick-row .pick-ovr { width: 40px; text-align: right; font-weight: 700; }
+
+@keyframes draftPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0.4); }
+  50% { box-shadow: 0 0 20px 4px rgba(249,115,22,0.2); }
+}
+.draft-pick-row.current { animation: draftPulse 1.5s infinite; background: var(--accent-dim); }
 </style>
 </head>
 <body>
@@ -224,7 +244,7 @@ body { font-family: var(--font); background: var(--bg-darkest); color: var(--tex
     <div id="continue-slots"></div>
     <div class="title-import" onclick="importSave()">Import Save File</div>
   </div>
-  <div class="title-version">v0.2.0 &mdash; Pass 2</div>
+  <div class="title-version">v0.3.0 &mdash; Pass 3</div>
 </div>
 
 <div id="creation-screen" class="hidden" style="position:fixed;inset:0;z-index:900;background:var(--bg-darkest);overflow-y:auto;">
@@ -327,12 +347,12 @@ body { font-family: var(--font); background: var(--bg-darkest); color: var(--tex
 
 <script>
 // ═══════════════════════════════════════════════════
-// GAME ENGINE — Hardwood Legacy v0.2
+// GAME ENGINE — Hardwood Legacy v0.3
 // ═══════════════════════════════════════════════════
 
 const SAVE_KEY_PREFIX = 'hardwood_legacy_v1_slot_';
 const MAX_SLOTS = 3;
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 
 const POSITIONS = {
   PG: { label: 'Point Guard', hintHeight: '6\'0" - 6\'4"', heightRange: [72, 76] },
@@ -414,6 +434,70 @@ const COLLEGE_PROGRAMS = [
     coach: { name: 'Coach Dalton', style: 'fast-break', patience: 75, devBonus: 1.3 } },
 ];
 
+const PRO_TEAMS = [
+  { id:'ATL', name:'Atlanta Hawks', city:'Atlanta', conf:'East', need:['PG','SF'], prestige:55 },
+  { id:'BOS', name:'Boston Celtics', city:'Boston', conf:'East', need:['C','PF'], prestige:85 },
+  { id:'BKN', name:'Brooklyn Nets', city:'Brooklyn', conf:'East', need:['PG','SG'], prestige:60 },
+  { id:'CHA', name:'Charlotte Hornets', city:'Charlotte', conf:'East', need:['PF','C'], prestige:40 },
+  { id:'CHI', name:'Chicago Bulls', city:'Chicago', conf:'East', need:['PG','SF'], prestige:65 },
+  { id:'CLE', name:'Cleveland Cavaliers', city:'Cleveland', conf:'East', need:['SG','PF'], prestige:62 },
+  { id:'DAL', name:'Dallas Mavericks', city:'Dallas', conf:'West', need:['C','SG'], prestige:70 },
+  { id:'DEN', name:'Denver Nuggets', city:'Denver', conf:'West', need:['PG','SF'], prestige:78 },
+  { id:'DET', name:'Detroit Pistons', city:'Detroit', conf:'East', need:['PG','SF'], prestige:35 },
+  { id:'GSW', name:'Golden State Warriors', city:'San Francisco', conf:'West', need:['C','PF'], prestige:80 },
+  { id:'HOU', name:'Houston Rockets', city:'Houston', conf:'West', need:['SG','PF'], prestige:55 },
+  { id:'IND', name:'Indiana Pacers', city:'Indianapolis', conf:'East', need:['SF','C'], prestige:58 },
+  { id:'LAC', name:'Los Angeles Clippers', city:'Los Angeles', conf:'West', need:['PG','PF'], prestige:60 },
+  { id:'LAL', name:'Los Angeles Lakers', city:'Los Angeles', conf:'West', need:['PG','C'], prestige:88 },
+  { id:'MEM', name:'Memphis Grizzlies', city:'Memphis', conf:'West', need:['SG','PF'], prestige:65 },
+  { id:'MIA', name:'Miami Heat', city:'Miami', conf:'East', need:['PG','C'], prestige:72 },
+  { id:'MIL', name:'Milwaukee Bucks', city:'Milwaukee', conf:'East', need:['SG','PF'], prestige:75 },
+  { id:'MIN', name:'Minnesota Timberwolves', city:'Minneapolis', conf:'West', need:['SG','SF'], prestige:58 },
+  { id:'NOP', name:'New Orleans Pelicans', city:'New Orleans', conf:'West', need:['PG','SF'], prestige:50 },
+  { id:'NYK', name:'New York Knicks', city:'New York', conf:'East', need:['PG','C'], prestige:70 },
+  { id:'OKC', name:'Oklahoma City Thunder', city:'Oklahoma City', conf:'West', need:['SF','C'], prestige:75 },
+  { id:'ORL', name:'Orlando Magic', city:'Orlando', conf:'East', need:['PG','PF'], prestige:52 },
+  { id:'PHI', name:'Philadelphia 76ers', city:'Philadelphia', conf:'East', need:['SG','PF'], prestige:68 },
+  { id:'PHX', name:'Phoenix Suns', city:'Phoenix', conf:'West', need:['PG','C'], prestige:65 },
+  { id:'POR', name:'Portland Trail Blazers', city:'Portland', conf:'West', need:['SG','SF'], prestige:50 },
+  { id:'SAC', name:'Sacramento Kings', city:'Sacramento', conf:'West', need:['SF','PF'], prestige:48 },
+  { id:'SAS', name:'San Antonio Spurs', city:'San Antonio', conf:'West', need:['PG','SG'], prestige:60 },
+  { id:'TOR', name:'Toronto Raptors', city:'Toronto', conf:'East', need:['SG','C'], prestige:62 },
+  { id:'UTA', name:'Utah Jazz', city:'Salt Lake City', conf:'West', need:['PG','SF'], prestige:52 },
+  { id:'WAS', name:'Washington Wizards', city:'Washington', conf:'East', need:['SF','C'], prestige:42 },
+];
+
+const COMBINE_DRILLS = [
+  { id: 'sprint', name: 'Lane Agility Drill', desc: 'Tests lateral quickness and agility', attrs: ['speed','stamina'], icon: '\u{1F3C3}' },
+  { id: 'vertical', name: 'Standing Vertical Leap', desc: 'Measures explosive jumping ability', attrs: ['vertical','strength'], icon: '\u{2B06}' },
+  { id: 'shooting', name: 'Spot-Up Shooting', desc: 'Catch-and-shoot from 5 spots', attrs: ['threePoint','midRange','freeThrow'], icon: '\u{1F3AF}' },
+  { id: 'ballhandling', name: 'Ball Handling Gauntlet', desc: 'Tests handles under pressure', attrs: ['ballHandling','passing','speed'], icon: '\u{1F3C0}' },
+  { id: 'scrimmage', name: '5-on-5 Scrimmage', desc: 'Full-court game against other prospects', attrs: ['closeShot','layup','perimeterDef','interiorDef'], icon: '\u{26F9}' },
+];
+
+const INTERVIEW_QUESTIONS = [
+  { q: 'What motivates you to play basketball?', options: [
+    { text: 'The love of competition', effect: { coachability: 3, personality: 2 } },
+    { text: 'Being the best in the world', effect: { personality: -1, ceiling: 3 } },
+    { text: 'Taking care of my family', effect: { coachability: 1, personality: 4 } },
+  ]},
+  { q: 'How do you handle adversity during a game?', options: [
+    { text: 'I stay calm and focus on the next play', effect: { coachability: 4, personality: 2 } },
+    { text: 'I use it as fuel to play harder', effect: { ceiling: 2, personality: 1 } },
+    { text: 'I look to my teammates for energy', effect: { coachability: 2, personality: 3 } },
+  ]},
+  { q: 'What area of your game needs the most work?', options: [
+    { text: 'I\'m always trying to improve everything', effect: { coachability: 3, personality: 1 } },
+    { text: 'My defense could be more consistent', effect: { coachability: 4, personality: 2 } },
+    { text: 'I need to become a better leader', effect: { personality: 4, coachability: 1 } },
+  ]},
+  { q: 'How would your college coach describe you?', options: [
+    { text: 'First in the gym, last to leave', effect: { coachability: 5, personality: 1 } },
+    { text: 'A fierce competitor who hates losing', effect: { ceiling: 3, coachability: 1 } },
+    { text: 'The glue guy who makes everyone better', effect: { personality: 5, coachability: 2 } },
+  ]},
+];
+
 const FIRST_NAMES = ['James','Marcus','DeShawn','Tyler','Jordan','Andre','Chris','Malik','Isaiah','Jaylen','Terrence','Darius','Kyle','Brandon','Aaron','Devon','Eric','Nate','Trey','Cam','Zion','Jamal','Kevin','Derrick','Russell','Damian','LeBron','Kobe','Stephen','Giannis'];
 const LAST_NAMES = ['Williams','Johnson','Brown','Davis','Wilson','Anderson','Thomas','Jackson','White','Harris','Martin','Thompson','Garcia','Robinson','Clark','Lewis','Walker','Hall','Young','King','Wright','Lopez','Hill','Scott','Green','Adams','Baker','Mitchell','Turner','Phillips'];
 
@@ -471,6 +555,19 @@ function generateSchedule(phase, tier) {
   return schedule;
 }
 
+function generateDraftProspect(posHint, ovrRange, school) {
+  const n = generatePlayerName();
+  const pos = posHint || randFrom(['PG','SG','SF','PF','C']);
+  const ovr = randInt(ovrRange[0], ovrRange[1]);
+  const heightInches = POSITIONS[pos].heightRange[0] + randInt(-1, POSITIONS[pos].heightRange[1] - POSITIONS[pos].heightRange[0] + 1);
+  return {
+    firstName: n.first, lastName: n.last, position: pos, ovr,
+    heightFt: Math.floor(heightInches/12), heightIn: heightInches%12,
+    school: school || randFrom(['Duke','Kentucky','Kansas','UNC','Gonzaga','Memphis','Michigan','UCLA','Arizona','Villanova','Baylor','Alabama']),
+    isPlayer: false,
+  };
+}
+
 // ─── GAME STATE ───
 
 let G = null;
@@ -503,10 +600,25 @@ function defaultState() {
       currentSeasonStats: { gp: 0, pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, min: 0, fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0 },
       offers: [],
     },
+    draft: {
+      combineComplete: false,
+      combineResults: [],
+      interviewResults: [],
+      combineStockChange: 0,
+      interviewImpression: 0,
+      draftBoard: [],
+      draftResults: [],
+      draftPick: null,
+      draftTeam: null,
+      undrafted: false,
+    },
     pro: {
       team: null, seasonsPlayed: 0, contract: null, role: 'bench',
       relationships: { coach: 50, teammate1: 50, teammate2: 50, frontOffice: 50, fans: 50 },
       injuries: [], tradeHistory: [], seasonStats: [], gameLog: [],
+      record: { w: 0, l: 0 },
+      currentSeasonStats: { gp: 0, pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, min: 0, fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0 },
+      roster: [],
     },
     career: {
       stats: [], awards: [], milestones: [],
@@ -576,8 +688,8 @@ function toast(msg, type = 'info') {
 
 // ─── MODAL ───
 
-function showModal(html) {
-  document.getElementById('modal-root').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`;
+function showModal(html, wide) {
+  document.getElementById('modal-root').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal${wide?' wide':''}">${html}</div></div>`;
 }
 function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
 
@@ -704,6 +816,7 @@ function enterGame() {
   document.getElementById('title-screen').classList.add('hidden');
   document.getElementById('creation-screen').classList.add('hidden');
   document.getElementById('app').classList.add('active');
+  if (!G.draft) G.draft = defaultState().draft;
   computeRatings();
   document.getElementById('topbar-avatar').textContent = (G.player.firstName[0]||'')+(G.player.lastName[0]||'');
   updateTopbar(); updateSaveTimestamp(); navigate('home');
@@ -713,6 +826,7 @@ function updateTopbar() {
   const pl={highschool:'High School',college:'College',draft:'Draft',pro:'Pro',retired:'Retired'};
   const schoolName = G.phase==='highschool' ? (HIGH_SCHOOLS.find(h=>h.id===G.highSchool.school)?.name||'')
     : G.phase==='college' ? (G.college.school ? COLLEGE_PROGRAMS.find(p=>p.id===G.college.school)?.name||'' : '')
+    : G.phase==='pro' ? (G.pro.team ? PRO_TEAMS.find(t=>t.id===G.pro.team)?.name||'' : '')
     : '';
   document.getElementById('topbar-date').textContent =
     `${pl[G.phase]||G.phase}${schoolName?' — '+schoolName:''} — Year ${G.season.year}, Week ${G.season.week}`;
@@ -740,6 +854,9 @@ function renderPlaceholder(c, page) {
 // ─── HOME PAGE ───
 
 function renderHomePage(c) {
+  if (G.phase === 'draft') { renderDraftHomePage(c); return; }
+  if (G.phase === 'pro') { renderProHomePage(c); return; }
+
   const p = G.player;
   const pl = {highschool:'High School',college:'College',draft:'Draft',pro:'Pro',retired:'Retired'};
   const schoolName = G.phase==='highschool' ? HIGH_SCHOOLS.find(h=>h.id===G.highSchool.school)?.name||''
@@ -806,6 +923,143 @@ function renderHomePage(c) {
   `;
 }
 
+// ─── DRAFT HOME PAGE ───
+
+function renderDraftHomePage(c) {
+  const p = G.player;
+  const d = G.draft;
+  const stock = G.college.draftStock || 30;
+
+  if (d.draftPick !== null) {
+    const team = PRO_TEAMS.find(t=>t.id===d.draftTeam);
+    c.innerHTML = `
+      <div class="card" style="text-align:center;padding:40px;">
+        <div style="font-size:48px;margin-bottom:16px;">\u{1F3C6}</div>
+        <div style="font-size:28px;font-weight:800;color:var(--accent);margin-bottom:8px;">You've Been Drafted!</div>
+        <div style="font-size:18px;color:var(--text-secondary);margin-bottom:4px;">Pick #${d.draftPick} &mdash; ${d.draftPick<=14?'Lottery Pick':d.draftPick<=30?'1st Round':'2nd Round'}</div>
+        <div style="font-size:22px;font-weight:700;margin-bottom:24px;">${team?.name||'Unknown Team'}</div>
+        <div style="display:flex;gap:24px;justify-content:center;margin-bottom:24px;">
+          ${ringHTML(p.overallRating,'OVR','large')} ${ringHTML(p.offenseRating,'OFF')} ${ringHTML(p.defenseRating,'DEF')}
+        </div>
+        <button class="btn primary" onclick="beginProCareer()" style="font-size:16px;padding:14px 32px;">Begin Pro Career ▶</button>
+      </div>
+      ${renderDraftBoardCard()}`;
+    return;
+  }
+
+  if (d.undrafted) {
+    c.innerHTML = `
+      <div class="card" style="text-align:center;padding:40px;">
+        <div style="font-size:48px;margin-bottom:16px;">\u{1F614}</div>
+        <div style="font-size:24px;font-weight:800;color:var(--text-secondary);margin-bottom:8px;">Undrafted</div>
+        <div style="font-size:14px;color:var(--text-muted);margin-bottom:24px;">You weren't selected in the draft, but your journey isn't over.</div>
+        <div style="display:flex;gap:24px;justify-content:center;margin-bottom:24px;">
+          ${ringHTML(p.overallRating,'OVR','large')} ${ringHTML(p.offenseRating,'OFF')} ${ringHTML(p.defenseRating,'DEF')}
+        </div>
+        <button class="btn primary" onclick="showFreeAgentTryouts()" style="font-size:16px;padding:14px 32px;">Free Agent Tryouts ▶</button>
+      </div>
+      ${renderDraftBoardCard()}`;
+    return;
+  }
+
+  let stepsDone = 0;
+  if (d.combineComplete) stepsDone++;
+  if (d.interviewResults.length > 0) stepsDone++;
+
+  c.innerHTML = `
+    <div class="card">
+      <div class="card-title">Draft Process</div>
+      <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;">
+        <div style="width:72px;height:72px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#000;">${p.firstName[0]}${p.lastName[0]}</div>
+        <div>
+          <div style="font-size:22px;font-weight:800;">${esc(p.firstName)} ${esc(p.lastName)}</div>
+          <div style="font-size:13px;color:var(--text-secondary);">${POSITIONS[p.position]?.label} &middot; ${p.heightFt}'${p.heightIn}" &middot; ${p.weight} lbs &middot; OVR ${p.overallRating}</div>
+          <div style="font-size:13px;color:var(--accent);font-weight:600;margin-top:4px;">Draft Stock: ${G.college.mockDraft||'Undrafted Projection'}</div>
+        </div>
+      </div>
+      ${draftStockBar(stock)}
+    </div>
+
+    <div class="card-grid">
+      <div class="card" style="${d.combineComplete?'opacity:0.6':''}">
+        <div class="card-title">\u{1F3CB} Draft Combine</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Showcase your athleticism and skills in front of scouts.</div>
+        ${d.combineComplete
+          ? `<div style="font-size:13px;color:var(--green);font-weight:600;">✓ Complete (${d.combineStockChange>=0?'+':''}${d.combineStockChange} stock)</div>`
+          : `<button class="btn primary" onclick="startCombine()">Start Combine ▶</button>`}
+      </div>
+
+      <div class="card" style="${d.interviewResults.length>0?'opacity:0.6':!d.combineComplete?'opacity:0.4':''}">
+        <div class="card-title">\u{1F4CB} Team Interviews</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Meet with team scouts and answer their questions.</div>
+        ${d.interviewResults.length > 0
+          ? `<div style="font-size:13px;color:var(--green);font-weight:600;">✓ Complete (Impression: ${d.interviewImpression>=8?'Excellent':d.interviewImpression>=5?'Good':'Average'})</div>`
+          : d.combineComplete
+            ? `<button class="btn primary" onclick="startInterviews()">Start Interviews ▶</button>`
+            : `<div style="font-size:12px;color:var(--text-muted);">Complete the combine first</div>`}
+      </div>
+
+      <div class="card" style="${stepsDone<2?'opacity:0.4':''}">
+        <div class="card-title">\u{1F3C6} Draft Day</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">60 picks. 30 teams. Where will you land?</div>
+        ${stepsDone >= 2
+          ? `<button class="btn primary" onclick="startDraftDay()">Start Draft ▶</button>`
+          : `<div style="font-size:12px;color:var(--text-muted);">Complete combine and interviews first</div>`}
+      </div>
+    </div>
+  `;
+}
+
+// ─── PRO HOME PAGE ───
+
+function renderProHomePage(c) {
+  const p = G.player;
+  const team = PRO_TEAMS.find(t=>t.id===G.pro.team);
+  const cs = G.pro.currentSeasonStats;
+  const rec = G.pro.record;
+  const contract = G.pro.contract;
+  const nextGame = G.season.schedule[G.season.nextGameIdx];
+
+  c.innerHTML = `
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-title">Player Overview</div>
+        <div style="display:flex;align-items:center;gap:20px;">
+          <div style="width:72px;height:72px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#000;">${p.firstName[0]}${p.lastName[0]}</div>
+          <div>
+            <div style="font-size:22px;font-weight:800;">${esc(p.firstName)} ${esc(p.lastName)}</div>
+            <div style="font-size:13px;color:var(--text-secondary);">${POSITIONS[p.position]?.label} &middot; ${p.heightFt}'${p.heightIn}" &middot; ${p.weight} lbs</div>
+            <div style="font-size:13px;color:var(--accent);font-weight:600;margin-top:2px;">${team?.name||'Free Agent'}</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Age ${p.age} &middot; ${{bench:'Bench',rotation:'Rotation',starter:'Starter',star:'Star',superstar:'Superstar'}[G.pro.role]||G.pro.role}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:24px;margin-top:20px;justify-content:center;">
+          ${ringHTML(p.overallRating,'OVR')} ${ringHTML(p.offenseRating,'OFF')} ${ringHTML(p.defenseRating,'DEF')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Season Status</div>
+        ${meterRow('Team', team?.name||'Free Agent')}
+        ${meterRow('Season', 'Year '+G.pro.seasonsPlayed)}
+        ${meterRow('Week', G.season.week+' / '+G.season.maxWeeks)}
+        ${meterRow('Record', rec.w+'-'+rec.l)}
+        ${meterRow('Role', {bench:'Bench',rotation:'Rotation',starter:'Starter',star:'Star',superstar:'Superstar'}[G.pro.role]||G.pro.role)}
+        ${contract?meterRow('Contract', '$'+contract.salary+'M / '+contract.years+'yr'+(contract.years<=1?' (expiring)':'')):''}
+        <div style="margin-top:16px;"><button class="btn primary" onclick="navigate('development')" style="width:100%;">Go to Development →</button></div>
+      </div>
+    </div>
+    ${cs && cs.gp > 0 ? `<div class="card"><div class="card-title">Season Averages</div>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;text-align:center;">
+        ${statBox('PPG',(cs.pts/cs.gp).toFixed(1))} ${statBox('RPG',(cs.reb/cs.gp).toFixed(1))} ${statBox('APG',(cs.ast/cs.gp).toFixed(1))}
+        ${statBox('SPG',(cs.stl/cs.gp).toFixed(1))} ${statBox('BPG',(cs.blk/cs.gp).toFixed(1))} ${statBox('MPG',(cs.min/cs.gp).toFixed(1))}
+      </div></div>` : ''}
+    ${nextGame && !nextGame.played ? `<div class="card"><div class="card-title">Next Game</div>
+      <div style="font-size:15px;font-weight:700;">vs ${esc(nextGame.opponent)}</div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Week ${nextGame.week} &middot; Opponent Strength: ${nextGame.oppStrength}</div>
+    </div>` : ''}
+  `;
+}
+
 function statBox(label, val) {
   return `<div><div style="font-size:11px;color:var(--text-muted);">${label}</div><div style="font-size:20px;font-weight:800;">${val}</div></div>`;
 }
@@ -819,7 +1073,7 @@ function recruitBar(label, value) {
 function draftStockBar(stock) {
   const pct = clamp(stock, 0, 100);
   const col = pct>=75?'var(--green)':pct>=50?'var(--yellow)':pct>=25?'var(--accent)':'var(--text-muted)';
-  const label = pct>=80?'Lottery Pick':pct>=60?'1st Round':pct>=40?'2nd Round':pct>=20?'Fringe':' Undrafted';
+  const label = pct>=80?'Lottery Pick':pct>=60?'1st Round':pct>=40?'2nd Round':pct>=20?'Fringe':'Undrafted';
   return `<div class="draft-stock-bar"><div class="draft-stock-track"><div class="draft-stock-fill" style="width:${pct}%;background:${col};"></div></div><div class="draft-stock-label" style="color:${col}">${label}</div></div>`;
 }
 
@@ -837,6 +1091,7 @@ function renderPlayerPage(c) {
           ${esc(p.hometown)} &middot; Age ${p.age}<br>
           Archetype: ${ARCHETYPES.find(a=>a.id===p.archetype)?.name||''}<br>
           Potential: ${'★'.repeat(p.potential)}${'☆'.repeat(5-p.potential)}
+          ${G.phase==='pro'&&G.pro.team?'<br>Team: '+PRO_TEAMS.find(t=>t.id===G.pro.team)?.name:''}
         </div>
       </div>
     </div></div>
@@ -854,6 +1109,12 @@ function renderPlayerPage(c) {
 // ─── DEVELOPMENT PAGE ───
 
 function renderDevelopmentPage(c) {
+  if (G.phase === 'draft') {
+    c.innerHTML = `<div class="card"><div class="card-title">Pre-Draft Training</div>
+      <div style="font-size:13px;color:var(--text-secondary);">Focus on the draft process. Head to <a href="#" onclick="navigate('home');return false;" style="color:var(--accent);">Home</a> to continue.</div></div>`;
+    return;
+  }
+
   const names = ['Practice', 'Film Study', 'Strength & Conditioning', 'Social / Rest'];
   const icons = ['\u{1F3C0}','\u{1F4FA}','\u{1F4AA}','\u{1F6CC}'];
   const descs = ['Improve shooting, ball handling, and skill attributes','Boost basketball IQ (small chance to improve any attribute)','Build speed, strength, stamina, and vertical','Recover fatigue, prevent burnout, boost morale'];
@@ -906,20 +1167,17 @@ function simWeek() {
   const devMul = phase==='highschool' ? (HIGH_SCHOOLS.find(h=>h.id===G.highSchool.school)?.devBonus||1)
     : phase==='college' ? (COLLEGE_PROGRAMS.find(p=>p.id===G.college.school)?.coach.devBonus||1) : 1;
 
-  // Training
   const offKeys = ['closeShot','midRange','threePoint','freeThrow','layup','dunk','ballHandling','passing'];
   const physKeys = ['speed','strength','stamina','vertical'];
   for(let s=0;s<alloc[0];s++){const k=randFrom(offKeys); if(Math.random()<0.55&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+Math.round(devMul));results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1');}}
   for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key; if(Math.random()<0.25&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+1);results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1 (IQ)');}}
   for(let s=0;s<alloc[2];s++){const k=randFrom(physKeys); if(Math.random()<0.55&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+Math.round(devMul));results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1');}}
 
-  // Fatigue/morale
   const restSessions = alloc[3];
   G.player.fatigue = clamp((G.player.fatigue||0) + (7 - restSessions) * 2 - restSessions * 5, 0, 100);
   G.player.morale = clamp((G.player.morale||80) + restSessions * 3 - (G.player.fatigue > 60 ? 5 : 0), 20, 100);
   if(restSessions>=2) results.push('Well-rested (fatigue -' + (restSessions*5) + '%)');
 
-  // Games this week
   let gameResult = null;
   const sched = G.season.schedule;
   while(G.season.nextGameIdx < sched.length && sched[G.season.nextGameIdx].week <= G.season.week) {
@@ -999,14 +1257,17 @@ function simGame(schedEntry) {
   const oppStr = schedEntry.oppStrength;
   const fatiguePenalty = (G.player.fatigue||0) > 50 ? (G.player.fatigue - 50) * 0.15 : 0;
 
-  // Minutes based on role and OVR
-  let baseMin = G.phase==='college'
-    ? ({bench:12,rotation:22,starter:32,star:36}[G.college.role]||20)
-    : clamp(16 + (ovr - 30) * 0.3, 12, 36);
+  let baseMin;
+  if (G.phase === 'pro') {
+    baseMin = {bench:14,rotation:24,starter:34,star:36,superstar:38}[G.pro.role]||22;
+  } else if (G.phase === 'college') {
+    baseMin = {bench:12,rotation:22,starter:32,star:36}[G.college.role]||20;
+  } else {
+    baseMin = clamp(16 + (ovr - 30) * 0.3, 12, 36);
+  }
   const min = clamp(Math.round(baseMin + randInt(-4,4) - fatiguePenalty*0.2), 8, 40);
   const minFactor = min / 36;
 
-  // Shooting simulation
   const fga = clamp(Math.round((8 + off*0.08) * minFactor + randInt(-3,3)), 2, 30);
   const tpa = clamp(Math.round(fga * (a.threePoint||25)/120 + randInt(-1,2)), 0, fga);
   const twoa = fga - tpa;
@@ -1024,29 +1285,35 @@ function simGame(schedEntry) {
   const stl = clamp(Math.round((a.steal||25)*0.03 * minFactor + randInt(0,2)), 0, 7);
   const blk = clamp(Math.round((a.block||25)*0.025 * minFactor + randInt(0,2)), 0, 7);
 
-  const teamOvr = G.phase==='college' && G.college.roster.length>0
-    ? G.college.roster.reduce((s,t)=>s+t.ovr,0)/G.college.roster.length : ovr * 0.85;
-  const teamScore = clamp(Math.round(60 + (teamOvr + ovr)*0.3 + randInt(-12,12)), 45, 120);
-  const oppScore = clamp(Math.round(55 + oppStr * 0.7 + randInt(-12,12)), 40, 115);
+  let teamOvr;
+  if (G.phase === 'pro' && G.pro.roster && G.pro.roster.length > 0) {
+    teamOvr = G.pro.roster.reduce((s,t)=>s+t.ovr,0)/G.pro.roster.length;
+  } else if (G.phase === 'college' && G.college.roster.length > 0) {
+    teamOvr = G.college.roster.reduce((s,t)=>s+t.ovr,0)/G.college.roster.length;
+  } else {
+    teamOvr = ovr * 0.85;
+  }
+  const teamScore = clamp(Math.round(60 + (teamOvr + ovr)*0.3 + randInt(-12,12)), 45, 130);
+  const oppScore = clamp(Math.round(55 + oppStr * 0.7 + randInt(-12,12)), 40, 125);
   const won = teamScore > oppScore;
 
   const game = { opponent: schedEntry.opponent, pts, reb, ast, stl, blk, min, fgm, fga, tpm, tpa, ftm, fta, won, teamScore, oppScore, week: schedEntry.week };
 
-  // Update stats
   const phase = G.phase;
-  const cs = phase==='highschool'?G.highSchool.currentSeasonStats:phase==='college'?G.college.currentSeasonStats:null;
-  const gl = phase==='highschool'?G.highSchool.gameLog:phase==='college'?G.college.gameLog:[];
-  const rec = phase==='highschool'?G.highSchool.record:phase==='college'?G.college.record:{w:0,l:0};
+  let cs, gl, rec;
+  if (phase === 'highschool') { cs=G.highSchool.currentSeasonStats; gl=G.highSchool.gameLog; rec=G.highSchool.record; }
+  else if (phase === 'college') { cs=G.college.currentSeasonStats; gl=G.college.gameLog; rec=G.college.record; }
+  else if (phase === 'pro') { cs=G.pro.currentSeasonStats; gl=G.pro.gameLog; rec=G.pro.record; }
+  else { cs=null; gl=[]; rec={w:0,l:0}; }
+
   if(cs){cs.gp++;cs.pts+=pts;cs.reb+=reb;cs.ast+=ast;cs.stl+=stl;cs.blk+=blk;cs.min+=min;cs.fgm+=fgm;cs.fga+=fga;cs.tpm+=tpm;cs.tpa+=tpa;cs.ftm+=ftm;cs.fta+=fta;}
   gl.push(game);
   if(won) rec.w++; else rec.l++;
   G.career.totalGames++; G.career.totalPoints+=pts; G.career.totalRebounds+=reb; G.career.totalAssists+=ast;
 
-  // Phase-specific updates
   if(phase==='highschool') updateRecruitingInterest(game);
   if(phase==='college') updateDraftStock(game);
 
-  // Fatigue from games
   G.player.fatigue = clamp((G.player.fatigue||0) + Math.round(min * 0.3), 0, 100);
 
   return game;
@@ -1067,7 +1334,6 @@ function updateDraftStock(game) {
   const ovr = G.player.overallRating;
   const momentum = perf > 40 ? 3 : perf > 25 ? 1 : perf < 10 ? -2 : 0;
   G.college.draftStock = clamp(G.college.draftStock + momentum + (ovr > 70 ? 1 : 0), 0, 100);
-  // Update mock draft
   const stock = G.college.draftStock;
   if(stock >= 90) G.college.mockDraft = '#' + randInt(1,3) + ' Pick';
   else if(stock >= 75) G.college.mockDraft = '#' + randInt(4,14) + ' Pick';
@@ -1082,6 +1348,7 @@ function updateDraftStock(game) {
 function endOfSeason() {
   if(G.phase === 'highschool') endHSSeason();
   else if(G.phase === 'college') endCollegeSeason();
+  else if(G.phase === 'pro') endProSeason();
 }
 
 function endHSSeason() {
@@ -1096,11 +1363,9 @@ function endHSSeason() {
   G.highSchool.seasonsPlayed++;
   G.player.age++;
 
-  // Check if HS is over
   if(G.highSchool.seasonsPlayed >= G.highSchool.maxSeasons) {
     showCollegeSelection();
   } else {
-    // Reset for next HS season
     G.season.year++;
     G.season.week = 1;
     G.season.nextGameIdx = 0;
@@ -1117,7 +1382,6 @@ function showCollegeSelection() {
   const ri = G.highSchool.recruitingInterest;
   const offers = [];
 
-  // Generate offers based on recruiting interest
   COLLEGE_PROGRAMS.forEach(prog => {
     let threshold = 0;
     if(prog.tier==='blueBlood') threshold = 60;
@@ -1131,7 +1395,6 @@ function showCollegeSelection() {
     }
   });
 
-  // Always have at least 2 offers
   if(offers.length < 2) {
     const smalls = COLLEGE_PROGRAMS.filter(p=>p.tier==='small'&&!offers.find(o=>o.id===p.id));
     while(offers.length < 2 && smalls.length > 0) {
@@ -1169,7 +1432,7 @@ function showCollegeSelection() {
       <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">Alternative Path</div>
       <div class="offer-card" onclick="selectCollegeOffer(-1)" id="offer--1" style="margin-bottom:0;">
         <div style="font-weight:700;">Skip College &mdash; Elite Prospect Path</div>
-        <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Go directly to the G-League or overseas. Higher risk, faster path to the pros. ${G.player.overallRating>=55?'<span class="text-green">Your ratings support this path.</span>':'<span class="text-red">Warning: Your ratings may not be ready.</span>'}</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Go directly to the draft. Higher risk, faster path to the pros. ${G.player.overallRating>=55?'<span class="text-green">Your ratings support this path.</span>':'<span class="text-red">Warning: Your ratings may not be ready.</span>'}</div>
       </div>
     </div>
     <div class="btn-group" style="justify-content:flex-end;"><button class="btn primary" onclick="confirmCollegeChoice()">Confirm Choice</button></div>`;
@@ -1190,10 +1453,11 @@ function confirmCollegeChoice() {
   closeModal();
 
   if(selectedCollegeOffer === -1) {
-    // Elite prospect / skip college
-    toast('You chose the elite prospect path! Draft coming in a future update.', 'success');
     G.phase = 'draft';
+    G.college.draftStock = clamp(G.player.overallRating * 0.6, 5, 50);
+    G.college.mockDraft = G.college.draftStock >= 35 ? '2nd Round' : 'Fringe / Undrafted';
     saveGame(false); updateTopbar(); navigate('home');
+    toast('You chose the elite prospect path! Prepare for the draft.', 'success');
     return;
   }
 
@@ -1223,7 +1487,6 @@ function endCollegeSeason() {
   const rec = G.college.record;
   const prog = COLLEGE_PROGRAMS.find(p=>p.id===G.college.school);
 
-  // Season awards
   const seasonAwards = [];
   if(cs.gp > 0) {
     const ppg = cs.pts/cs.gp, rpg = cs.reb/cs.gp, apg = cs.ast/cs.gp;
@@ -1248,20 +1511,15 @@ function endCollegeSeason() {
   G.college.seasonsPlayed++;
   G.player.age++;
 
-  // Role progression
   if(cs.gp > 0) {
     const ppg = cs.pts/cs.gp;
-    const coachP = prog?.coach.patience || 50;
     if(G.college.role==='bench' && (ppg >= 8 || G.college.coachTrust >= 55)) { G.college.role = 'rotation'; G.college.coachTrust = clamp(G.college.coachTrust + 10, 0, 100); }
     else if(G.college.role==='rotation' && (ppg >= 14 || G.college.coachTrust >= 70)) { G.college.role = 'starter'; G.college.coachTrust = clamp(G.college.coachTrust + 8, 0, 100); }
     else if(G.college.role==='starter' && ppg >= 20 && G.college.coachTrust >= 75) { G.college.role = 'star'; }
     G.college.coachTrust = clamp(G.college.coachTrust + Math.round(ppg * 0.5) - 5, 0, 100);
   }
 
-  // Update mock draft one more time
   updateDraftStock({ pts: 0, reb: 0, ast: 0, stl: 0, blk: 0 });
-
-  // Show end-of-season decision
   showCollegeSeasonEnd(seasonAwards);
 }
 
@@ -1326,7 +1584,6 @@ function returnToCollege() {
   G.college.currentSeasonStats = {gp:0,pts:0,reb:0,ast:0,stl:0,blk:0,min:0,fgm:0,fga:0,tpm:0,tpa:0,ftm:0,fta:0};
   G.college.gameLog = [];
   G.season.schedule = generateSchedule('college', prog?.tier);
-  // Roster turnover — seniors leave, new players join
   G.college.roster = G.college.roster.filter(t => t.year < 4).map(t => ({...t, year: t.year+1, ovr: clamp(t.ovr + randInt(-2,4), 40, 90)}));
   while(G.college.roster.length < 12) G.college.roster.push(generateTeammate(null, prog?.tier==='blueBlood'?[65,82]:prog?.tier==='midMajor'?[55,75]:[45,68]));
   saveGame(false);
@@ -1337,8 +1594,590 @@ function returnToCollege() {
 function declareForDraft() {
   closeModal();
   G.phase = 'draft';
-  toast('You have declared for the draft! Draft day coming in Pass 3.', 'success');
+  if (!G.draft) G.draft = defaultState().draft;
   saveGame(false); updateTopbar(); navigate('home');
+  toast('You have declared for the draft!', 'success');
+}
+
+// ═══════════════════════════════════════════════════
+// DRAFT COMBINE
+// ═══════════════════════════════════════════════════
+
+function startCombine() {
+  const d = G.draft;
+  const results = [];
+  let totalStockChange = 0;
+
+  COMBINE_DRILLS.forEach(drill => {
+    const attrAvg = drill.attrs.reduce((s,k) => s + (G.player.attributes[k]||25), 0) / drill.attrs.length;
+    const luck = randInt(-8, 8);
+    const score = clamp(Math.round(attrAvg + luck), 20, 99);
+    const grade = score >= 85 ? 'A+' : score >= 75 ? 'A' : score >= 65 ? 'B+' : score >= 55 ? 'B' : score >= 45 ? 'C' : 'D';
+    const stockChange = score >= 80 ? randInt(3,6) : score >= 65 ? randInt(1,3) : score >= 50 ? 0 : randInt(-4,-1);
+    totalStockChange += stockChange;
+    results.push({ ...drill, score, grade, stockChange });
+  });
+
+  d.combineResults = results;
+  d.combineStockChange = totalStockChange;
+  d.combineComplete = true;
+  G.college.draftStock = clamp((G.college.draftStock||30) + totalStockChange, 0, 100);
+
+  // Update mock draft
+  const stock = G.college.draftStock;
+  if(stock >= 90) G.college.mockDraft = '#' + randInt(1,3) + ' Pick';
+  else if(stock >= 75) G.college.mockDraft = '#' + randInt(4,14) + ' Pick';
+  else if(stock >= 55) G.college.mockDraft = 'Late 1st Round';
+  else if(stock >= 35) G.college.mockDraft = '2nd Round';
+  else if(stock >= 15) G.college.mockDraft = 'Fringe / Undrafted';
+  else G.college.mockDraft = 'Undrafted';
+
+  saveGame(false);
+
+  let html = `<div class="modal-title">\u{1F3CB} Combine Results</div>
+    <div class="modal-body">Here's how you performed across all drills:</div>`;
+
+  results.forEach(r => {
+    const col = r.grade.startsWith('A')?'var(--green)':r.grade.startsWith('B')?'var(--yellow)':'var(--red)';
+    html += `<div class="combine-drill">
+      <div class="drill-name">${r.icon} ${r.name}</div>
+      <div class="drill-desc">${r.desc}</div>
+      <div class="drill-result">
+        <span style="color:${col};font-size:18px;font-weight:800;">${r.grade}</span>
+        <span style="margin-left:12px;color:var(--text-secondary);">Score: ${r.score}</span>
+        <span style="margin-left:12px;color:${r.stockChange>=0?'var(--green)':'var(--red)'};">${r.stockChange>=0?'+':''}${r.stockChange} stock</span>
+      </div>
+    </div>`;
+  });
+
+  html += `<div style="margin-top:16px;padding:12px;background:var(--bg-input);border-radius:var(--radius-sm);">
+    <div style="font-size:14px;font-weight:700;">Total Stock Change: <span style="color:${totalStockChange>=0?'var(--green)':'var(--red)'};">${totalStockChange>=0?'+':''}${totalStockChange}</span></div>
+    <div style="font-size:13px;color:var(--text-secondary);margin-top:4px;">Updated Projection: <strong>${G.college.mockDraft}</strong></div>
+  </div>
+  <div class="btn-group" style="justify-content:flex-end;"><button class="btn primary" onclick="closeModal();navigate('home');">Continue ▶</button></div>`;
+
+  showModal(html);
+}
+
+// ═══════════════════════════════════════════════════
+// TEAM INTERVIEWS
+// ═══════════════════════════════════════════════════
+
+let _interviewIdx = 0;
+let _interviewScores = { coachability: 0, personality: 0, ceiling: 0 };
+
+function startInterviews() {
+  _interviewIdx = 0;
+  _interviewScores = { coachability: 0, personality: 0, ceiling: 0 };
+  showInterviewQuestion();
+}
+
+function showInterviewQuestion() {
+  if (_interviewIdx >= INTERVIEW_QUESTIONS.length) {
+    finishInterviews();
+    return;
+  }
+  const q = INTERVIEW_QUESTIONS[_interviewIdx];
+  let html = `<div class="modal-title">\u{1F4CB} Team Interview (${_interviewIdx+1}/${INTERVIEW_QUESTIONS.length})</div>
+    <div style="font-size:15px;font-weight:600;margin-bottom:16px;color:var(--text-primary);">"${q.q}"</div>`;
+
+  q.options.forEach((opt, i) => {
+    html += `<div class="offer-card" onclick="answerInterview(${_interviewIdx},${i})">
+      <div style="font-size:14px;">${opt.text}</div>
+    </div>`;
+  });
+
+  html += `<div style="font-size:11px;color:var(--text-muted);margin-top:12px;">Your answers affect how teams perceive your character and ceiling.</div>`;
+  showModal(html);
+}
+
+function answerInterview(qIdx, optIdx) {
+  const q = INTERVIEW_QUESTIONS[qIdx];
+  const opt = q.options[optIdx];
+  for (const [k, v] of Object.entries(opt.effect)) {
+    _interviewScores[k] = (_interviewScores[k]||0) + v;
+  }
+  G.draft.interviewResults.push({ question: q.q, answer: opt.text, effect: opt.effect });
+  _interviewIdx++;
+  showInterviewQuestion();
+}
+
+function finishInterviews() {
+  const total = _interviewScores.coachability + _interviewScores.personality + _interviewScores.ceiling;
+  G.draft.interviewImpression = total;
+  const stockBonus = total >= 12 ? randInt(4,8) : total >= 8 ? randInt(2,5) : total >= 4 ? randInt(0,2) : randInt(-3,0);
+  G.college.draftStock = clamp((G.college.draftStock||30) + stockBonus, 0, 100);
+
+  const stock = G.college.draftStock;
+  if(stock >= 90) G.college.mockDraft = '#' + randInt(1,3) + ' Pick';
+  else if(stock >= 75) G.college.mockDraft = '#' + randInt(4,14) + ' Pick';
+  else if(stock >= 55) G.college.mockDraft = 'Late 1st Round';
+  else if(stock >= 35) G.college.mockDraft = '2nd Round';
+  else if(stock >= 15) G.college.mockDraft = 'Fringe / Undrafted';
+  else G.college.mockDraft = 'Undrafted';
+
+  saveGame(false);
+
+  const impression = total >= 12 ? 'Excellent' : total >= 8 ? 'Good' : total >= 4 ? 'Average' : 'Poor';
+  let html = `<div class="modal-title">\u{1F4CB} Interview Complete</div>
+    <div style="margin-bottom:16px;">
+      <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Overall Impression: <span style="color:${total>=8?'var(--green)':total>=4?'var(--yellow)':'var(--red)'};">${impression}</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center;margin-bottom:16px;">
+        ${statBox('Coachability', _interviewScores.coachability)}
+        ${statBox('Personality', _interviewScores.personality)}
+        ${statBox('Ceiling', _interviewScores.ceiling)}
+      </div>
+      <div style="font-size:13px;color:var(--text-secondary);">Stock Change: <span style="color:${stockBonus>=0?'var(--green)':'var(--red)'};">${stockBonus>=0?'+':''}${stockBonus}</span></div>
+      <div style="font-size:13px;color:var(--text-secondary);">Updated Projection: <strong>${G.college.mockDraft}</strong></div>
+    </div>
+    <div class="btn-group" style="justify-content:flex-end;"><button class="btn primary" onclick="closeModal();navigate('home');">Continue ▶</button></div>`;
+  showModal(html);
+}
+
+// ═══════════════════════════════════════════════════
+// DRAFT DAY
+// ═══════════════════════════════════════════════════
+
+function generateDraftBoard() {
+  const prospects = [];
+  const stock = G.college.draftStock || 30;
+
+  // Player entry
+  const playerEntry = {
+    firstName: G.player.firstName, lastName: G.player.lastName,
+    position: G.player.position, ovr: G.player.overallRating,
+    heightFt: G.player.heightFt, heightIn: G.player.heightIn,
+    school: G.phase==='college'&&G.college.school ? COLLEGE_PROGRAMS.find(p=>p.id===G.college.school)?.name||'Prep' : 'Prep',
+    isPlayer: true, stock: stock,
+  };
+
+  // Generate 59 CPU prospects with varying skill levels
+  const tiers = [
+    { count: 5, ovrRange: [72, 82], school: null },   // top prospects
+    { count: 10, ovrRange: [65, 75], school: null },
+    { count: 15, ovrRange: [58, 68], school: null },
+    { count: 15, ovrRange: [50, 62], school: null },
+    { count: 14, ovrRange: [42, 55], school: null },
+  ];
+
+  tiers.forEach(tier => {
+    for (let i = 0; i < tier.count; i++) {
+      prospects.push(generateDraftProspect(null, tier.ovrRange, tier.school));
+    }
+  });
+
+  // Sort by OVR with some randomness
+  prospects.forEach(p => { p.stock = p.ovr + randInt(-6, 6); });
+  prospects.push(playerEntry);
+  prospects.sort((a, b) => b.stock - a.stock);
+
+  return prospects;
+}
+
+function startDraftDay() {
+  const board = generateDraftBoard();
+  G.draft.draftBoard = board;
+
+  // Shuffle team order for picks (lottery simulation)
+  const teamOrder = [...PRO_TEAMS].sort(() => Math.random() - 0.5);
+  // 2 rounds, 30 teams each
+  const picks = [];
+  for (let round = 0; round < 2; round++) {
+    teamOrder.forEach((team, i) => {
+      picks.push({ pickNum: round * 30 + i + 1, teamId: team.id, teamName: team.name, player: null });
+    });
+  }
+
+  // Simulate the draft
+  const available = [...board];
+  picks.forEach(pick => {
+    const team = PRO_TEAMS.find(t => t.id === pick.teamId);
+    // Teams prefer positions they need, but also take BPA
+    let bestIdx = 0;
+    let bestScore = -1;
+    available.forEach((prospect, idx) => {
+      let score = prospect.stock;
+      if (team && team.need.includes(prospect.position)) score += randInt(3, 8);
+      // Interview bonus for the player
+      if (prospect.isPlayer) {
+        score += (G.draft.interviewImpression || 0) * 0.5;
+      }
+      if (score > bestScore) { bestScore = score; bestIdx = idx; }
+    });
+
+    const selected = available.splice(bestIdx, 1)[0];
+    pick.player = selected;
+
+    if (selected.isPlayer) {
+      G.draft.draftPick = pick.pickNum;
+      G.draft.draftTeam = pick.teamId;
+    }
+  });
+
+  G.draft.draftResults = picks;
+
+  if (!G.draft.draftPick) {
+    G.draft.undrafted = true;
+  }
+
+  saveGame(false);
+  showDraftAnimation(picks);
+}
+
+function showDraftAnimation(picks) {
+  const playerPick = picks.find(p => p.player && p.player.isPlayer);
+  const playerPickNum = playerPick ? playerPick.pickNum : 61;
+
+  // Show picks up to and including the player's, or all 60 if undrafted
+  const showUpTo = G.draft.undrafted ? 60 : Math.min(playerPickNum + 3, 60);
+  let currentPick = 0;
+
+  let html = `<div class="modal-title">\u{1F3C6} Draft Day</div>
+    <div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">60 picks. 30 teams. Where will you land?</div>
+    <div id="draft-feed" style="max-height:400px;overflow-y:auto;"></div>
+    <div id="draft-controls" style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;">
+      <span id="draft-status" style="font-size:13px;color:var(--text-secondary);">Pick 1 coming up...</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" id="draft-next-btn" onclick="draftNextPick()">Next Pick ▶</button>
+        <button class="btn" id="draft-sim-btn" onclick="draftSimAll()">Sim All ▶▶</button>
+      </div>
+    </div>`;
+
+  showModal(html, true);
+
+  window._draftPicks = picks;
+  window._draftCurrent = 0;
+  window._draftShowUpTo = showUpTo;
+}
+
+function draftNextPick() {
+  const picks = window._draftPicks;
+  const idx = window._draftCurrent;
+  if (idx >= 60) return;
+
+  const pick = picks[idx];
+  const feed = document.getElementById('draft-feed');
+  const status = document.getElementById('draft-status');
+  const isPlayer = pick.player && pick.player.isPlayer;
+  const p = pick.player;
+
+  const row = document.createElement('div');
+  row.className = 'draft-pick-row' + (isPlayer ? ' you' : '');
+  row.innerHTML = `
+    <span class="pick-num">${pick.pickNum}</span>
+    <span class="pick-team">${pick.teamName}</span>
+    <span class="pick-player">${isPlayer?'<strong style="color:var(--accent);">':''}${p.firstName} ${p.lastName}${isPlayer?'</strong> \u{1F31F}':''}</span>
+    <span class="pick-pos">${p.position}</span>
+    <span class="pick-ovr" style="color:${attrColor(p.ovr)}">${p.ovr}</span>`;
+  feed.appendChild(row);
+  feed.scrollTop = feed.scrollHeight;
+
+  window._draftCurrent = idx + 1;
+
+  if (isPlayer) {
+    status.innerHTML = `<span style="color:var(--accent);font-weight:700;">\u{1F389} You were selected #${pick.pickNum} by ${pick.teamName}!</span>`;
+    document.getElementById('draft-next-btn').style.display = 'none';
+    document.getElementById('draft-sim-btn').textContent = 'See Remaining Picks';
+    document.getElementById('draft-sim-btn').onclick = () => draftSimAll();
+  } else if (idx + 1 >= 60) {
+    if (G.draft.undrafted) {
+      status.innerHTML = `<span style="color:var(--red);font-weight:700;">The draft is over. You went undrafted.</span>`;
+    }
+    document.getElementById('draft-next-btn').style.display = 'none';
+    document.getElementById('draft-sim-btn').textContent = 'Continue';
+    document.getElementById('draft-sim-btn').onclick = () => { closeModal(); navigate('home'); };
+  } else {
+    status.textContent = `Pick ${idx + 2} coming up...`;
+  }
+}
+
+function draftSimAll() {
+  while (window._draftCurrent < 60) {
+    draftNextPick();
+  }
+  document.getElementById('draft-next-btn').style.display = 'none';
+  document.getElementById('draft-sim-btn').textContent = 'Continue';
+  document.getElementById('draft-sim-btn').onclick = () => { closeModal(); navigate('home'); };
+}
+
+function renderDraftBoardCard() {
+  if (!G.draft.draftResults || G.draft.draftResults.length === 0) return '';
+  const picks = G.draft.draftResults;
+  let html = `<div class="card"><div class="card-title">Draft Results</div>
+    <div style="max-height:400px;overflow-y:auto;">`;
+  picks.forEach(pick => {
+    if (!pick.player) return;
+    const isPlayer = pick.player.isPlayer;
+    html += `<div class="draft-pick-row${isPlayer?' you':''}">
+      <span class="pick-num">${pick.pickNum}</span>
+      <span class="pick-team">${pick.teamName}</span>
+      <span class="pick-player">${isPlayer?'<strong style="color:var(--accent);">':''}${pick.player.firstName} ${pick.player.lastName}${isPlayer?'</strong>':''}</span>
+      <span class="pick-pos">${pick.player.position}</span>
+      <span class="pick-ovr" style="color:${attrColor(pick.player.ovr)}">${pick.player.ovr}</span>
+    </div>`;
+  });
+  html += '</div></div>';
+  return html;
+}
+
+// ═══════════════════════════════════════════════════
+// FREE AGENT TRYOUTS (Undrafted Path)
+// ═══════════════════════════════════════════════════
+
+function showFreeAgentTryouts() {
+  // Generate 3 teams willing to give a tryout
+  const interested = [...PRO_TEAMS]
+    .filter(t => t.need.includes(G.player.position) || Math.random() < 0.3)
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 3);
+
+  if (interested.length === 0) {
+    interested.push(PRO_TEAMS[randInt(0, PRO_TEAMS.length-1)]);
+  }
+
+  let html = `<div class="modal-title">\u{1F3C0} Free Agent Tryouts</div>
+    <div class="modal-body">Three teams are willing to give you a workout. Impress them enough and you'll earn a roster spot.</div>`;
+
+  interested.forEach((team, i) => {
+    const needsPos = team.need.includes(G.player.position);
+    html += `<div class="offer-card" onclick="selectFATryout(${i})" id="fa-${i}">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-weight:700;font-size:16px;">${team.name}</div>
+          <div style="font-size:12px;color:var(--text-secondary);">${team.city} &middot; ${team.conf}</div>
+        </div>
+        <div style="text-align:right;">
+          ${needsPos?'<span class="badge badge-green">Needs '+G.player.position+'</span>':'<span class="badge badge-yellow">Open Roster</span>'}
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Prestige: ${team.prestige}</div>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  html += `<div class="btn-group" style="justify-content:flex-end;"><button class="btn primary" onclick="confirmFATryout()">Try Out ▶</button></div>`;
+
+  window._faTeams = interested;
+  window._faSelected = null;
+  showModal(html);
+}
+
+function selectFATryout(idx) {
+  window._faSelected = idx;
+  document.querySelectorAll('.offer-card').forEach(el => el.classList.remove('selected'));
+  document.getElementById('fa-'+idx).classList.add('selected');
+}
+
+function confirmFATryout() {
+  if (window._faSelected === null) { toast('Select a team', 'error'); return; }
+  const team = window._faTeams[window._faSelected];
+
+  // Simulate tryout
+  const ovr = G.player.overallRating;
+  const luck = randInt(-10, 10);
+  const performance = ovr + luck;
+  const threshold = team.need.includes(G.player.position) ? 45 : 55;
+  const signed = performance >= threshold;
+
+  closeModal();
+
+  if (signed) {
+    G.draft.draftTeam = team.id;
+    G.draft.draftPick = 0; // Undrafted
+    G.draft.undrafted = true;
+    toast(`You signed with the ${team.name}!`, 'success');
+
+    let html = `<div class="modal-title">\u{1F389} You Made the Team!</div>
+      <div style="text-align:center;padding:20px;">
+        <div style="font-size:22px;font-weight:700;margin-bottom:8px;">${team.name}</div>
+        <div style="font-size:14px;color:var(--text-secondary);margin-bottom:16px;">Undrafted Free Agent Signing</div>
+        <div style="font-size:13px;color:var(--text-secondary);">You'll start at the bottom of the roster, but every NBA player has to start somewhere.</div>
+        <div style="margin-top:24px;">
+          <button class="btn primary" onclick="closeModal();beginProCareer();" style="font-size:16px;padding:14px 32px;">Begin Pro Career ▶</button>
+        </div>
+      </div>`;
+    showModal(html);
+  } else {
+    // Offer another chance or lesser team
+    toast('Tryout unsuccessful. Looking for other options...', 'info');
+    const fallback = PRO_TEAMS.filter(t => t.id !== team.id).sort((a,b) => a.prestige - b.prestige)[0];
+    G.draft.draftTeam = fallback.id;
+    G.draft.draftPick = 0;
+    G.draft.undrafted = true;
+
+    let html = `<div class="modal-title">\u{1F3C0} Second Chance</div>
+      <div style="text-align:center;padding:20px;">
+        <div style="font-size:14px;color:var(--text-secondary);margin-bottom:12px;">The ${team.name} passed, but the <strong>${fallback.name}</strong> are willing to sign you to a two-way contract.</div>
+        <div style="font-size:22px;font-weight:700;margin-bottom:16px;">${fallback.name}</div>
+        <div style="font-size:13px;color:var(--text-secondary);">You'll have to work extra hard to prove yourself.</div>
+        <div style="margin-top:24px;">
+          <button class="btn primary" onclick="closeModal();beginProCareer();" style="font-size:16px;padding:14px 32px;">Begin Pro Career ▶</button>
+        </div>
+      </div>`;
+    showModal(html);
+  }
+
+  saveGame(false);
+}
+
+// ═══════════════════════════════════════════════════
+// BEGIN PRO CAREER
+// ═══════════════════════════════════════════════════
+
+function beginProCareer() {
+  closeModal();
+  const teamId = G.draft.draftTeam;
+  const team = PRO_TEAMS.find(t => t.id === teamId);
+  const pickNum = G.draft.draftPick || 0;
+
+  G.phase = 'pro';
+  G.pro.team = teamId;
+  G.pro.seasonsPlayed = 1;
+
+  // Contract based on draft position
+  if (pickNum >= 1 && pickNum <= 5) {
+    G.pro.contract = { salary: randInt(8, 12), years: 4, type: 'Rookie Scale' };
+    G.pro.role = 'starter';
+  } else if (pickNum >= 6 && pickNum <= 14) {
+    G.pro.contract = { salary: randInt(5, 8), years: 4, type: 'Rookie Scale' };
+    G.pro.role = 'rotation';
+  } else if (pickNum >= 15 && pickNum <= 30) {
+    G.pro.contract = { salary: randInt(2, 5), years: 3, type: 'Rookie Scale' };
+    G.pro.role = 'rotation';
+  } else if (pickNum >= 31 && pickNum <= 60) {
+    G.pro.contract = { salary: randInt(1, 2), years: 2, type: '2nd Round' };
+    G.pro.role = 'bench';
+  } else {
+    G.pro.contract = { salary: 1, years: 1, type: 'Minimum' };
+    G.pro.role = 'bench';
+  }
+
+  // Generate pro roster
+  const rosterRange = team.prestige >= 70 ? [70, 85] : team.prestige >= 50 ? [62, 78] : [55, 72];
+  G.pro.roster = [];
+  const positions = ['PG','SG','SF','PF','C','PG','SG','SF','PF','C','SF','PG','SG','PF'];
+  positions.forEach(pos => {
+    G.pro.roster.push({
+      firstName: randFrom(FIRST_NAMES), lastName: randFrom(LAST_NAMES),
+      position: pos, ovr: randInt(rosterRange[0], rosterRange[1]),
+    });
+  });
+
+  // Generate pro schedule
+  G.pro.record = { w: 0, l: 0 };
+  G.pro.currentSeasonStats = {gp:0,pts:0,reb:0,ast:0,stl:0,blk:0,min:0,fgm:0,fga:0,tpm:0,tpa:0,ftm:0,fta:0};
+  G.pro.gameLog = [];
+  G.season.year = 1;
+  G.season.week = 1;
+  G.season.maxWeeks = 30;
+  G.season.nextGameIdx = 0;
+  G.season.schedule = generateProSchedule();
+
+  G.player.fatigue = 0;
+  G.player.morale = 80;
+
+  G.career.milestones.push({ text: `Entered pro career with ${team.name} (Pick #${pickNum||'UDFA'})`, age: G.player.age });
+
+  saveGame(false);
+  toast(`Welcome to the ${team.name}!`, 'success');
+  updateTopbar();
+  navigate('home');
+}
+
+function generateProSchedule() {
+  const schedule = [];
+  const opponents = PRO_TEAMS.filter(t => t.id !== G.pro.team).map(t => t.name);
+  const numGames = 82;
+  for (let i = 0; i < numGames; i++) {
+    const weekNum = Math.floor(i * 28 / numGames) + 1;
+    const opp = opponents[i % opponents.length];
+    const oppStrength = randInt(55, 85);
+    schedule.push({ week: weekNum, opponent: opp, oppStrength, isConf: false, played: false, result: null });
+  }
+  return schedule;
+}
+
+function endProSeason() {
+  const cs = G.pro.currentSeasonStats;
+  const rec = G.pro.record;
+  const team = PRO_TEAMS.find(t => t.id === G.pro.team);
+
+  const seasonAwards = [];
+  if (cs.gp > 0) {
+    const ppg = cs.pts/cs.gp, rpg = cs.reb/cs.gp, apg = cs.ast/cs.gp;
+    if (ppg >= 25 && G.player.overallRating >= 82) seasonAwards.push('All-Star');
+    if (ppg >= 28 && rpg >= 7 && G.player.overallRating >= 85) seasonAwards.push('All-Pro 1st Team');
+    else if (ppg >= 22 && G.player.overallRating >= 78) seasonAwards.push('All-Pro 2nd Team');
+    if (G.pro.seasonsPlayed === 1 && ppg >= 15) seasonAwards.push('Rookie of the Year');
+    if (ppg >= 30 && G.player.overallRating >= 88) seasonAwards.push('MVP');
+  }
+
+  seasonAwards.forEach(aw => G.career.awards.push({ name: aw, year: G.season.year, phase: 'pro', team: team?.name||'' }));
+
+  const logEntry = {
+    year: G.season.year, phase: 'pro',
+    school: team?.name||'', team: team?.name||'',
+    ...cs, record: `${rec.w}-${rec.l}`, ovr: G.player.overallRating,
+    role: G.pro.role, awards: [...seasonAwards],
+  };
+  G.pro.seasonStats.push(logEntry);
+  G.career.stats.push(logEntry);
+  G.pro.seasonsPlayed++;
+  G.player.age++;
+
+  // Role progression
+  if (cs.gp > 0) {
+    const ppg = cs.pts/cs.gp;
+    if (G.pro.role === 'bench' && ppg >= 10) G.pro.role = 'rotation';
+    else if (G.pro.role === 'rotation' && ppg >= 16) G.pro.role = 'starter';
+    else if (G.pro.role === 'starter' && ppg >= 22) G.pro.role = 'star';
+    else if (G.pro.role === 'star' && ppg >= 27) G.pro.role = 'superstar';
+  }
+
+  // Contract year check
+  if (G.pro.contract) {
+    G.pro.contract.years--;
+    if (G.pro.contract.years <= 0) {
+      G.pro.contract.salary = Math.round(G.pro.contract.salary * (G.pro.role === 'star' ? 2.5 : G.pro.role === 'starter' ? 1.8 : 1.2));
+      G.pro.contract.years = G.pro.role === 'star' ? 5 : G.pro.role === 'starter' ? 3 : 2;
+      G.pro.contract.type = 'Extension';
+    }
+  }
+
+  // Show summary
+  const gp = cs.gp || 1;
+  let html = `<div class="modal-title">\u{1F3C6} Season Complete</div>
+    <div style="margin-bottom:16px;">
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px;">${team?.name||''} &middot; ${rec.w}-${rec.l}</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:13px;text-align:center;margin-top:8px;">
+        ${statBox('PPG',(cs.pts/gp).toFixed(1))} ${statBox('RPG',(cs.reb/gp).toFixed(1))} ${statBox('APG',(cs.ast/gp).toFixed(1))} ${statBox('MPG',(cs.min/gp).toFixed(1))}
+      </div>
+      ${seasonAwards.length>0?`<div style="margin-top:12px;">${seasonAwards.map(a=>`<span class="badge badge-green" style="margin-right:6px;">${a}</span>`).join('')}</div>`:''}
+    </div>
+    <div class="btn-group" style="justify-content:flex-end;">
+      <button class="btn primary" onclick="startNextProSeason()">Next Season ▶</button>
+    </div>`;
+  showModal(html);
+}
+
+function startNextProSeason() {
+  closeModal();
+  G.season.year++;
+  G.season.week = 1;
+  G.season.nextGameIdx = 0;
+  G.pro.record = { w: 0, l: 0 };
+  G.pro.currentSeasonStats = {gp:0,pts:0,reb:0,ast:0,stl:0,blk:0,min:0,fgm:0,fga:0,tpm:0,tpa:0,ftm:0,fta:0};
+  G.pro.gameLog = [];
+  G.season.schedule = generateProSchedule();
+  // Roster turnover
+  G.pro.roster = G.pro.roster.map(t => ({...t, ovr: clamp(t.ovr + randInt(-3, 3), 50, 92)}));
+  const team = PRO_TEAMS.find(t => t.id === G.pro.team);
+  const range = team && team.prestige >= 70 ? [70,85] : team && team.prestige >= 50 ? [62,78] : [55,72];
+  while (G.pro.roster.length < 14) G.pro.roster.push({ firstName: randFrom(FIRST_NAMES), lastName: randFrom(LAST_NAMES), position: randFrom(['PG','SG','SF','PF','C']), ovr: randInt(range[0], range[1]) });
+  G.player.fatigue = 0;
+  G.player.morale = 80;
+  saveGame(false);
+  toast(`Season ${G.season.year} begins!`, 'success');
+  updateTopbar(); navigate('home');
 }
 
 // ─── TEAM PAGE ───
@@ -1365,7 +2204,7 @@ function renderTeamPage(c) {
         <tbody>
           <tr style="background:var(--accent-dim);">
             <td><strong>${esc(G.player.firstName)} ${esc(G.player.lastName)}</strong> <span class="badge badge-accent">YOU</span></td>
-            <td>${G.player.position}</td><td>Fr/So/Jr/Sr</td>
+            <td>${G.player.position}</td><td>${['Fr','So','Jr','Sr'][G.college.seasonsPlayed]||'Sr'}</td>
             <td class="num"><strong>${G.player.overallRating}</strong></td>
             <td><span class="badge badge-green">${{bench:'Bench',rotation:'Rotation',starter:'Starter',star:'Star'}[G.college.role]}</span></td>
           </tr>
@@ -1382,6 +2221,36 @@ function renderTeamPage(c) {
       <div class="meter-bar" style="margin-bottom:8px;"><div class="meter-fill" style="width:${G.college.coachTrust}%;background:${G.college.coachTrust>=60?'var(--green)':G.college.coachTrust>=35?'var(--yellow)':'var(--red)'};"></div></div>
       <div style="font-size:12px;color:var(--text-muted);">Coach patience: ${prog?.coach.patience>60?'High':prog?.coach.patience>40?'Medium':'Low'} &middot; Style: ${prog?.coach.style}</div>
     </div>`;
+  } else if (G.phase === 'pro') {
+    const team = PRO_TEAMS.find(t=>t.id===G.pro.team);
+    const roster = G.pro.roster || [];
+    c.innerHTML = `<div class="card">
+      <div class="card-title">${team?.name||'Team'} Roster</div>
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">
+        ${team?.city||''} &middot; ${team?.conf||''}<br>
+        Record: ${G.pro.record.w}-${G.pro.record.l} &middot; Your Role: ${{bench:'Bench',rotation:'Rotation',starter:'Starter',star:'Star',superstar:'Superstar'}[G.pro.role]||G.pro.role}
+      </div>
+      <table class="stats-table">
+        <thead><tr><th>Player</th><th>Pos</th><th class="num">OVR</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr style="background:var(--accent-dim);">
+            <td><strong>${esc(G.player.firstName)} ${esc(G.player.lastName)}</strong> <span class="badge badge-accent">YOU</span></td>
+            <td>${G.player.position}</td>
+            <td class="num"><strong>${G.player.overallRating}</strong></td>
+            <td><span class="badge badge-green">${{bench:'Bench',rotation:'Rotation',starter:'Starter',star:'Star',superstar:'Superstar'}[G.pro.role]}</span></td>
+          </tr>
+          ${roster.sort((a,b)=>b.ovr-a.ovr).map(t=>{
+            const roleGuess = t.ovr >= 80 ? 'Star' : t.ovr >= 72 ? 'Starter' : t.ovr >= 65 ? 'Rotation' : 'Bench';
+            return `<tr><td>${esc(t.firstName)} ${esc(t.lastName)}</td><td>${t.position}</td><td class="num">${t.ovr}</td><td><span class="badge ${roleGuess==='Star'?'badge-accent':roleGuess==='Starter'?'badge-green':roleGuess==='Rotation'?'badge-yellow':'badge-red'}">${roleGuess}</span></td></tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+    ${G.pro.contract?`<div class="card"><div class="card-title">Contract</div>
+      ${meterRow('Type', G.pro.contract.type)}
+      ${meterRow('Salary', '$'+G.pro.contract.salary+'M / year')}
+      ${meterRow('Years Remaining', G.pro.contract.years)}
+    </div>`:''}`;
   } else {
     renderPlaceholder(c, 'team');
   }
@@ -1393,10 +2262,14 @@ function renderSchedulePage(c) {
   const sched = G.season.schedule || [];
   if(sched.length === 0) { renderPlaceholder(c, 'schedule'); return; }
 
+  const teamName = G.phase==='highschool' ? HIGH_SCHOOLS.find(h=>h.id===G.highSchool.school)?.name||''
+    : G.phase==='college' ? COLLEGE_PROGRAMS.find(p=>p.id===G.college.school)?.name||''
+    : G.phase==='pro' ? PRO_TEAMS.find(t=>t.id===G.pro.team)?.name||'' : '';
+  const rec = G.phase==='highschool'?G.highSchool.record:G.phase==='college'?G.college.record:G.phase==='pro'?G.pro.record:{w:0,l:0};
+
   let html = `<div class="card"><div class="card-title">Season ${G.season.year} Schedule</div>
     <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">
-      ${G.phase==='highschool' ? HIGH_SCHOOLS.find(h=>h.id===G.highSchool.school)?.name||'' : COLLEGE_PROGRAMS.find(p=>p.id===G.college.school)?.name||''}
-      &middot; ${(G.phase==='highschool'?G.highSchool:G.college).record.w}-${(G.phase==='highschool'?G.highSchool:G.college).record.l}
+      ${teamName} &middot; ${rec.w}-${rec.l}
     </div>`;
 
   sched.forEach((g,i) => {
@@ -1427,23 +2300,20 @@ function renderSchedulePage(c) {
 
 function renderStatsPage(c) {
   const allStats = G.career.stats || [];
-  if(allStats.length === 0 && !(G.phase==='highschool'||G.phase==='college')) {
-    renderPlaceholder(c, 'stats'); return;
-  }
-
-  // Current season + historical
-  const current = G.phase==='highschool'?G.highSchool.currentSeasonStats:G.phase==='college'?G.college.currentSeasonStats:null;
-  const currentRec = G.phase==='highschool'?G.highSchool.record:G.phase==='college'?G.college.record:null;
-  const schoolName = G.phase==='highschool'?HIGH_SCHOOLS.find(h=>h.id===G.highSchool.school)?.name:G.phase==='college'?COLLEGE_PROGRAMS.find(p=>p.id===G.college.school)?.name:'';
+  const current = G.phase==='highschool'?G.highSchool.currentSeasonStats:G.phase==='college'?G.college.currentSeasonStats:G.phase==='pro'?G.pro.currentSeasonStats:null;
+  const currentRec = G.phase==='highschool'?G.highSchool.record:G.phase==='college'?G.college.record:G.phase==='pro'?G.pro.record:null;
+  const schoolName = G.phase==='highschool'?HIGH_SCHOOLS.find(h=>h.id===G.highSchool.school)?.name:G.phase==='college'?COLLEGE_PROGRAMS.find(p=>p.id===G.college.school)?.name:G.phase==='pro'?PRO_TEAMS.find(t=>t.id===G.pro.team)?.name:'';
 
   let rows = [...allStats];
   if(current && current.gp > 0) {
     rows.push({
-      year: G.season.year, phase: G.phase, school: schoolName||'',
+      year: G.season.year, phase: G.phase, school: schoolName||'', team: schoolName||'',
       ...current, record: currentRec ? `${currentRec.w}-${currentRec.l}` : '', ovr: G.player.overallRating,
       current: true,
     });
   }
+
+  if (rows.length === 0) { renderPlaceholder(c, 'stats'); return; }
 
   c.innerHTML = `<div class="card"><div class="card-title">Career Statistics</div>
     <div style="overflow-x:auto;">
@@ -1455,7 +2325,7 @@ function renderStatsPage(c) {
         ${rows.map(s => {
           const gp = s.gp||1;
           return `<tr ${s.current?'style="background:var(--accent-dim);"':''}>
-            <td>${s.year}${s.current?' *':''}</td><td>${{highschool:'HS',college:'COL',pro:'PRO'}[s.phase]||s.phase}</td><td>${esc(s.school||'')}</td>
+            <td>${s.year}${s.current?' *':''}</td><td>${{highschool:'HS',college:'COL',pro:'PRO'}[s.phase]||s.phase}</td><td>${esc(s.school||s.team||'')}</td>
             <td class="num">${s.gp}</td><td class="num"><strong>${(s.pts/gp).toFixed(1)}</strong></td><td class="num">${(s.reb/gp).toFixed(1)}</td><td class="num">${(s.ast/gp).toFixed(1)}</td>
             <td class="num">${(s.stl/gp).toFixed(1)}</td><td class="num">${(s.blk/gp).toFixed(1)}</td><td class="num">${(s.min/gp).toFixed(1)}</td>
             <td class="num">${s.fga>0?((s.fgm/s.fga)*100).toFixed(1)+'%':'--'}</td>
