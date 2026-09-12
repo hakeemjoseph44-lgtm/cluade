@@ -415,6 +415,7 @@ body { font-family: var(--font); background: var(--bg-darkest); color: var(--tex
     <div class="sidebar-section">
       <div class="sidebar-section-title">Team</div>
       <div class="sidebar-item" data-page="team" onclick="navigate('team')"><span class="icon">&#9780;</span> Team</div>
+      <div class="sidebar-item" data-page="standings" onclick="navigate('standings')"><span class="icon">&#9878;</span> Standings</div>
       <div class="sidebar-item" data-page="schedule" onclick="navigate('schedule')"><span class="icon">&#9776;</span> Schedule</div>
       <div class="sidebar-item" data-page="contracts" onclick="navigate('contracts')"><span class="icon">&#9733;</span> Contracts</div>
     </div>
@@ -1092,13 +1093,13 @@ function updateTopbar() {
 function navigate(page) {
   currentPage = page;
   document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.toggle('active',el.dataset.page===page));
-  const titles = { home:'Home / Office', player:'My Player', development:'Development', team:'Team', schedule:'Schedule', contracts:'Contracts', stats:'Stats', awards:'Awards & Honors', transactions:'Transactions', relationships:'Relationships', milestones:'Milestones', legacy:'Legacy Report', settings:'Settings', saveload:'Save / Load' };
+  const titles = { home:'Home / Office', player:'My Player', development:'Development', team:'Team', standings:'Standings', schedule:'Schedule', contracts:'Contracts', stats:'Stats', awards:'Awards & Honors', transactions:'Transactions', relationships:'Relationships', milestones:'Milestones', legacy:'Legacy Report', settings:'Settings', saveload:'Save / Load' };
   document.getElementById('page-title').textContent = titles[page]||page;
   renderPage(page);
 }
 function renderPage(page) {
   const c = document.getElementById('main-content');
-  const r = { home:renderHomePage, player:renderPlayerPage, development:renderDevelopmentPage, team:renderTeamPage, schedule:renderSchedulePage, contracts:renderContractsPage, stats:renderStatsPage, awards:renderAwardsPage, transactions:renderTransactionsPage, relationships:renderRelationshipsPage, milestones:renderMilestonesPage, legacy:renderLegacyPage, settings:renderSettingsPage, saveload:renderSaveLoadPage };
+  const r = { home:renderHomePage, player:renderPlayerPage, development:renderDevelopmentPage, team:renderTeamPage, standings:renderStandingsPage, schedule:renderSchedulePage, contracts:renderContractsPage, stats:renderStatsPage, awards:renderAwardsPage, transactions:renderTransactionsPage, relationships:renderRelationshipsPage, milestones:renderMilestonesPage, legacy:renderLegacyPage, settings:renderSettingsPage, saveload:renderSaveLoadPage };
   (r[page]||renderPlaceholder)(c, page);
 }
 function renderPlaceholder(c, page) {
@@ -2883,6 +2884,248 @@ function renderTeamPage(c) {
   } else {
     renderPlaceholder(c, 'team');
   }
+}
+
+// ─── STANDINGS PAGE ───
+
+function generateLeagueStandings() {
+  if (!G._leagueStandings || G._leagueStandingsWeek !== G.season.week) {
+    const week = G.season.week;
+    const maxW = G.season.maxWeeks;
+    const progress = clamp(week / maxW, 0, 1);
+
+    if (G.phase === 'pro') {
+      const standings = PRO_TEAMS.map(t => {
+        if (t.id === G.pro.team) {
+          return { id: t.id, name: t.name, conf: t.conf, w: G.pro.record.w, l: G.pro.record.l, prestige: t.prestige, isPlayer: true };
+        }
+        const expectedWinPct = (t.prestige - 20) / 100 + (Math.random() - 0.5) * 0.15;
+        const gamesPlayed = Math.round(82 * progress);
+        const wins = clamp(Math.round(gamesPlayed * clamp(expectedWinPct, 0.15, 0.85)), 0, gamesPlayed);
+        return { id: t.id, name: t.name, conf: t.conf, w: wins, l: gamesPlayed - wins, prestige: t.prestige, isPlayer: false };
+      });
+      standings.sort((a, b) => {
+        const pctA = a.w + a.l > 0 ? a.w / (a.w + a.l) : 0;
+        const pctB = b.w + b.l > 0 ? b.w / (b.w + b.l) : 0;
+        return pctB - pctA;
+      });
+      G._leagueStandings = standings;
+    } else if (G.phase === 'college') {
+      const prog = COLLEGE_PROGRAMS.find(p => p.id === G.college.school);
+      const confName = prog?.conf || 'Conference';
+      const confFillers = [
+        'State','Tech','A&M','Central','Northern','Southern','Eastern','Western',
+        'Metro','Valley','Coastal','Prairie','Mountain','Lake','River'
+      ];
+      const realConf = COLLEGE_PROGRAMS.filter(p => p.conf === confName);
+      const standings = realConf.map(t => {
+        if (t.id === G.college.school) {
+          return { id: t.id, name: t.name, conf: t.conf, tier: t.tier, w: G.college.record.w, l: G.college.record.l, isPlayer: true };
+        }
+        const gamesPlayed = Math.round((t.tier === 'blueBlood' ? 33 : t.tier === 'midMajor' ? 31 : 28) * progress);
+        const basePct = t.prestige / 130 + (Math.random() - 0.5) * 0.12;
+        const wins = clamp(Math.round(gamesPlayed * clamp(basePct, 0.2, 0.9)), 0, gamesPlayed);
+        return { id: t.id, name: t.name, conf: t.conf, tier: t.tier, w: wins, l: gamesPlayed - wins, isPlayer: false };
+      });
+      const fillerCount = Math.max(0, 12 - standings.length);
+      for (let i = 0; i < fillerCount; i++) {
+        const prestige = randInt(35, 80);
+        const gamesPlayed = Math.round(30 * progress);
+        const basePct = prestige / 130 + (Math.random() - 0.5) * 0.12;
+        const wins = clamp(Math.round(gamesPlayed * clamp(basePct, 0.2, 0.9)), 0, gamesPlayed);
+        standings.push({ id: 'filler_' + i, name: confFillers[i % confFillers.length], conf: confName, tier: 'filler', w: wins, l: gamesPlayed - wins, isPlayer: false });
+      }
+      standings.sort((a, b) => {
+        const pctA = a.w + a.l > 0 ? a.w / (a.w + a.l) : 0;
+        const pctB = b.w + b.l > 0 ? b.w / (b.w + b.l) : 0;
+        return pctB - pctA;
+      });
+      G._leagueStandings = standings;
+    } else if (G.phase === 'highschool') {
+      G._leagueStandings = [];
+    }
+    G._leagueStandingsWeek = week;
+  }
+  return G._leagueStandings;
+}
+
+function generateDraftBoard() {
+  if (!G._draftBoard || G._draftBoardWeek !== G.season.week) {
+    const prospects = [];
+    const schools = ['Duke','Kentucky','Kansas','UNC','Gonzaga','Memphis','Arizona','UCLA','Michigan','Baylor','Alabama','Villanova','Texas','Tennessee','Iowa St.','Purdue','Connecticut','Houston','Marquette','Auburn','Creighton','Indiana','Oregon','Illinois','USC','Ohio State','Florida','Wisconsin','Colorado','St. John\'s'];
+    const positions = ['PG','SG','SF','PF','C'];
+    for (let i = 0; i < 60; i++) {
+      prospects.push({
+        name: randFrom(FIRST_NAMES) + ' ' + randFrom(LAST_NAMES),
+        pos: randFrom(positions),
+        school: schools[i % schools.length],
+        ovr: clamp(85 - Math.round(i * 0.8) + randInt(-3, 3), 40, 95),
+        stock: clamp(100 - i * 1.6 + randInt(-5, 5), 2, 100),
+      });
+    }
+    const playerStock = G.college.draftStock || 0;
+    const playerEntry = {
+      name: G.player.firstName + ' ' + G.player.lastName,
+      pos: G.player.position,
+      school: COLLEGE_PROGRAMS.find(p => p.id === G.college.school)?.name || '',
+      ovr: G.player.overallRating,
+      stock: playerStock,
+      isPlayer: true,
+    };
+    prospects.push(playerEntry);
+    prospects.sort((a, b) => b.stock - a.stock);
+    G._draftBoard = prospects;
+    G._draftBoardWeek = G.season.week;
+  }
+  return G._draftBoard;
+}
+
+function generateRecruitRankings() {
+  if (!G._recruitRankings || G._recruitRankingsWeek !== G.season.week) {
+    const prospects = [];
+    const hsNames = ['Westview','Central','Eastside','North Valley','Southfield','Heritage','Summit','Lakewood','Crestview','Pacific','Mountain View','Capital','Riverside','Oakdale','Bridgeport','Jefferson','Lincoln','Roosevelt','Washington','Hamilton','Franklin','Madison','Monroe','Adams','Jackson'];
+    const positions = ['PG','SG','SF','PF','C'];
+    const playerOvr = G.player.overallRating;
+    for (let i = 0; i < 50; i++) {
+      const ovr = clamp(75 - Math.round(i * 0.7) + randInt(-4, 4), 30, 85);
+      prospects.push({
+        name: randFrom(FIRST_NAMES) + ' ' + randFrom(LAST_NAMES),
+        pos: randFrom(positions),
+        school: hsNames[i % hsNames.length] + ' HS',
+        ovr,
+        stars: ovr >= 70 ? 5 : ovr >= 60 ? 4 : ovr >= 50 ? 3 : ovr >= 40 ? 2 : 1,
+      });
+    }
+    const playerStars = playerOvr >= 70 ? 5 : playerOvr >= 60 ? 4 : playerOvr >= 50 ? 3 : playerOvr >= 40 ? 2 : 1;
+    prospects.push({
+      name: G.player.firstName + ' ' + G.player.lastName,
+      pos: G.player.position,
+      school: HIGH_SCHOOLS.find(h => h.id === G.highSchool.school)?.name || '',
+      ovr: playerOvr,
+      stars: playerStars,
+      isPlayer: true,
+    });
+    prospects.sort((a, b) => b.ovr - a.ovr);
+    G._recruitRankings = prospects;
+    G._recruitRankingsWeek = G.season.week;
+  }
+  return G._recruitRankings;
+}
+
+function renderStandingsPage(c) {
+  if (G.phase === 'pro') renderProStandings(c);
+  else if (G.phase === 'college') renderCollegeStandings(c);
+  else if (G.phase === 'highschool') renderHSStandings(c);
+  else renderPlaceholder(c, 'standings');
+}
+
+function renderProStandings(c) {
+  const standings = generateLeagueStandings();
+  const east = standings.filter(t => t.conf === 'East');
+  const west = standings.filter(t => t.conf === 'West');
+
+  function confTable(title, teams) {
+    let html = `<div class="card"><div class="card-title">${title}</div>
+      <div style="overflow-x:auto;"><table class="stats-table"><thead><tr>
+        <th>#</th><th>Team</th><th class="num">W</th><th class="num">L</th><th class="num">PCT</th><th class="num">GB</th>
+      </tr></thead><tbody>`;
+    const topPct = teams[0] && (teams[0].w + teams[0].l > 0) ? teams[0].w / (teams[0].w + teams[0].l) : 0;
+    teams.forEach((t, i) => {
+      const gp = t.w + t.l;
+      const pct = gp > 0 ? (t.w / gp).toFixed(3) : '.000';
+      const topGp = teams[0].w + teams[0].l;
+      const gb = topGp > 0 ? ((teams[0].w - t.w) - (teams[0].l - t.l)) / 2 : 0;
+      html += `<tr ${t.isPlayer?'style="background:var(--accent-dim);font-weight:700;"':''}>
+        <td>${i+1}</td><td>${esc(t.name)}${t.isPlayer?' (YOU)':''}</td>
+        <td class="num">${t.w}</td><td class="num">${t.l}</td>
+        <td class="num">${pct}</td><td class="num">${gb <= 0 ? '-' : gb.toFixed(1)}</td>
+      </tr>`;
+    });
+    html += '</tbody></table></div></div>';
+    return html;
+  }
+
+  c.innerHTML = `
+    <div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Season ${G.pro.seasonsPlayed} &middot; Week ${G.season.week} / ${G.season.maxWeeks}</div>
+    <div class="card-grid">${confTable('Eastern Conference', east)}${confTable('Western Conference', west)}</div>
+  `;
+}
+
+function renderCollegeStandings(c) {
+  const standings = generateLeagueStandings();
+  const prog = COLLEGE_PROGRAMS.find(p => p.id === G.college.school);
+  const board = generateDraftBoard();
+  const playerIdx = board.findIndex(p => p.isPlayer);
+  const displayStart = Math.max(0, playerIdx - 5);
+  const displayEnd = Math.min(board.length, displayStart + 20);
+
+  let html = `<div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Year ${G.season.year} &middot; ${prog?.name||''} (${prog?.conf||''}) &middot; Week ${G.season.week} / ${G.season.maxWeeks}</div>`;
+
+  html += `<div class="card"><div class="card-title">${prog?.conf||'Conference'} Standings</div>
+    <div style="overflow-x:auto;"><table class="stats-table"><thead><tr>
+      <th>#</th><th>Team</th><th class="num">W</th><th class="num">L</th><th class="num">PCT</th>
+    </tr></thead><tbody>`;
+  standings.forEach((t, i) => {
+    const gp = t.w + t.l;
+    const pct = gp > 0 ? (t.w / gp).toFixed(3) : '.000';
+    html += `<tr ${t.isPlayer?'style="background:var(--accent-dim);font-weight:700;"':''}>
+      <td>${i+1}</td><td>${esc(t.name)}${t.isPlayer?' (YOU)':''}</td>
+      <td class="num">${t.w}</td><td class="num">${t.l}</td><td class="num">${pct}</td>
+    </tr>`;
+  });
+  html += '</tbody></table></div></div>';
+
+  html += `<div class="card"><div class="card-title">Draft Big Board</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Your projection: <strong style="color:var(--accent);">${G.college.mockDraft||'--'}</strong> (Stock: ${G.college.draftStock||0})</div>
+    <div style="overflow-x:auto;"><table class="stats-table"><thead><tr>
+      <th>#</th><th>Prospect</th><th>Pos</th><th>School</th><th class="num">OVR</th><th class="num">Stock</th>
+    </tr></thead><tbody>`;
+  for (let i = displayStart; i < displayEnd && i < board.length; i++) {
+    const p = board[i];
+    html += `<tr ${p.isPlayer?'style="background:var(--accent-dim);font-weight:700;"':''}>
+      <td>${i+1}</td><td>${esc(p.name)}${p.isPlayer?' (YOU)':''}</td><td>${p.pos}</td><td>${esc(p.school)}</td>
+      <td class="num">${p.ovr}</td><td class="num">${p.stock}</td>
+    </tr>`;
+  }
+  html += '</tbody></table></div></div>';
+
+  c.innerHTML = html;
+}
+
+function renderHSStandings(c) {
+  const rankings = generateRecruitRankings();
+  const playerIdx = rankings.findIndex(p => p.isPlayer);
+  const displayStart = Math.max(0, playerIdx - 5);
+  const displayEnd = Math.min(rankings.length, displayStart + 25);
+  const ri = G.highSchool.recruitingInterest;
+
+  let html = `<div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Year ${G.season.year} &middot; Week ${G.season.week} / ${G.season.maxWeeks}</div>`;
+
+  html += `<div class="card"><div class="card-title">Recruiting Interest</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;">
+      ${recruitBar('Blue Bloods', ri.blueBlood)}
+      ${recruitBar('Mid-Majors', ri.midMajor)}
+      ${recruitBar('Small Schools', ri.small)}
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);">Perform well in games to attract college scouts. Blue Blood programs require the highest recruiting interest.</div>
+  </div>`;
+
+  html += `<div class="card"><div class="card-title">National Recruit Rankings</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Your rank: <strong style="color:var(--accent);">#${playerIdx+1}</strong> nationally</div>
+    <div style="overflow-x:auto;"><table class="stats-table"><thead><tr>
+      <th>#</th><th>Prospect</th><th>Pos</th><th>School</th><th class="num">OVR</th><th>Stars</th>
+    </tr></thead><tbody>`;
+  for (let i = displayStart; i < displayEnd && i < rankings.length; i++) {
+    const p = rankings[i];
+    const starsStr = '★'.repeat(p.stars) + '☆'.repeat(5 - p.stars);
+    html += `<tr ${p.isPlayer?'style="background:var(--accent-dim);font-weight:700;"':''}>
+      <td>${i+1}</td><td>${esc(p.name)}${p.isPlayer?' (YOU)':''}</td><td>${p.pos}</td><td>${esc(p.school)}</td>
+      <td class="num">${p.ovr}</td><td style="color:${p.stars>=4?'var(--accent)':p.stars>=3?'var(--yellow)':'var(--text-muted)'};font-size:12px;">${starsStr}</td>
+    </tr>`;
+  }
+  html += '</tbody></table></div></div>';
+
+  c.innerHTML = html;
 }
 
 // ─── SCHEDULE PAGE ───
