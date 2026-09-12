@@ -257,6 +257,76 @@ body { font-family: var(--font); background: var(--bg-darkest); color: var(--tex
 .aging-bar .phase-label { font-size: 11px; color: var(--text-muted); min-width: 50px; }
 .aging-bar .phase-track { flex: 1; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
 .aging-bar .phase-fill { height: 100%; border-radius: 3px; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ringDraw { from { stroke-dashoffset: var(--circ); } }
+@keyframes pulseGlow { 0%,100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); } 50% { box-shadow: 0 0 24px 4px rgba(249,115,22,0.15); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+.main-content > .card, .main-content > .card-grid { animation: fadeUp 0.3s ease-out both; }
+.main-content > *:nth-child(2) { animation-delay: 0.05s; }
+.main-content > *:nth-child(3) { animation-delay: 0.1s; }
+.main-content > *:nth-child(4) { animation-delay: 0.15s; }
+.main-content > *:nth-child(5) { animation-delay: 0.2s; }
+
+.card { transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s; }
+.card:hover { border-color: var(--border-light); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+
+.rating-ring svg circle:last-child { animation: ringDraw 0.8s ease-out both; }
+
+.sidebar-item { transition: all 0.15s ease; }
+.sidebar-item:hover { padding-left: 22px; }
+.sidebar-item.active { padding-left: 22px; }
+
+.btn { transition: all 0.15s ease; }
+.btn:active { transform: scale(0.97); }
+.btn.primary:hover { box-shadow: 0 4px 16px rgba(249,115,22,0.3); }
+
+.toast { animation: slideIn 0.25s cubic-bezier(0.34,1.56,0.64,1); }
+
+.modal { animation: fadeUp 0.2s ease-out; }
+.modal-overlay { animation: fadeIn 0.15s ease-out; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.legacy-banner { text-align: center; padding: 40px 24px; background: linear-gradient(135deg, rgba(249,115,22,0.08) 0%, rgba(249,115,22,0.02) 100%); border: 1px solid rgba(249,115,22,0.2); border-radius: var(--radius); margin-bottom: 16px; position: relative; overflow: hidden; }
+.legacy-banner::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%, rgba(249,115,22,0.1) 0%, transparent 70%); pointer-events: none; }
+.legacy-banner .legacy-icon { font-size: 56px; margin-bottom: 12px; filter: drop-shadow(0 4px 12px rgba(249,115,22,0.3)); }
+.legacy-banner .legacy-title { font-size: 32px; font-weight: 800; color: var(--accent); margin-bottom: 4px; letter-spacing: -0.5px; }
+.legacy-banner .legacy-class { font-size: 18px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+.legacy-banner .legacy-sub { font-size: 13px; color: var(--text-muted); }
+
+.legacy-hof { animation: pulseGlow 3s ease-in-out infinite; }
+
+.legacy-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; }
+.legacy-stat { text-align: center; padding: 16px 8px; background: var(--bg-input); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.legacy-stat .ls-val { font-size: 28px; font-weight: 800; color: var(--accent); }
+.legacy-stat .ls-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+.timeline { position: relative; padding-left: 28px; }
+.timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+.timeline-item { position: relative; padding: 12px 0 20px; }
+.timeline-item::before { content: ''; position: absolute; left: -24px; top: 16px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg-panel); border: 2px solid var(--border); z-index: 1; }
+.timeline-item.highlight::before { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 8px rgba(249,115,22,0.4); }
+.timeline-item .ti-phase { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+.timeline-item .ti-title { font-size: 14px; font-weight: 700; margin-top: 2px; }
+.timeline-item .ti-detail { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.timeline-item .ti-badges { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+
+.peak-card { background: linear-gradient(135deg, var(--bg-panel) 0%, rgba(249,115,22,0.06) 100%); border: 1px solid rgba(249,115,22,0.25); }
+
+.career-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: rgba(255,255,255,0.05); margin: 4px 0; }
+.career-bar-seg { height: 100%; transition: width 0.3s; }
+
+.earnings-total { font-size: 36px; font-weight: 800; color: var(--green); letter-spacing: -1px; }
+
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main-content { padding: 16px; }
+  .card-grid { grid-template-columns: 1fr; }
+  .legacy-stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .archetype-grid { grid-template-columns: repeat(2, 1fr); }
+  .title-logo { font-size: 32px; }
+}
 </style>
 </head>
 <body>
@@ -269,7 +339,7 @@ body { font-family: var(--font); background: var(--bg-darkest); color: var(--tex
     <div id="continue-slots"></div>
     <div class="title-import" onclick="importSave()">Import Save File</div>
   </div>
-  <div class="title-version">v0.4.0 &mdash; Pass 4</div>
+  <div class="title-version">v0.5.0 &mdash; Final</div>
 </div>
 
 <div id="creation-screen" class="hidden" style="position:fixed;inset:0;z-index:900;background:var(--bg-darkest);overflow-y:auto;">
@@ -351,6 +421,7 @@ body { font-family: var(--font); background: var(--bg-darkest); color: var(--tex
       <div class="sidebar-section-title">More</div>
       <div class="sidebar-item" data-page="relationships" onclick="navigate('relationships')"><span class="icon">&#9825;</span> Relationships</div>
       <div class="sidebar-item" data-page="milestones" onclick="navigate('milestones')"><span class="icon">&#10003;</span> Milestones</div>
+      <div class="sidebar-item" data-page="legacy" onclick="navigate('legacy')"><span class="icon">&#9812;</span> Legacy Report</div>
       <div class="sidebar-item" data-page="settings" onclick="navigate('settings')"><span class="icon">&#9881;</span> Settings</div>
       <div class="sidebar-item" data-page="saveload" onclick="navigate('saveload')"><span class="icon">&#9776;</span> Save / Load</div>
     </div>
@@ -372,7 +443,7 @@ body { font-family: var(--font); background: var(--bg-darkest); color: var(--tex
 
 <script>
 // ═══════════════════════════════════════════════════
-// GAME ENGINE — Hardwood Legacy v0.4
+// GAME ENGINE — Hardwood Legacy v0.5
 // ═══════════════════════════════════════════════════
 
 const SAVE_KEY_PREFIX = 'hardwood_legacy_v1_slot_';
@@ -910,13 +981,13 @@ function updateTopbar() {
 function navigate(page) {
   currentPage = page;
   document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.toggle('active',el.dataset.page===page));
-  const titles = { home:'Home / Office', player:'My Player', development:'Development', team:'Team', schedule:'Schedule', contracts:'Contracts', stats:'Stats', awards:'Awards & Honors', transactions:'Transactions', relationships:'Relationships', milestones:'Milestones', settings:'Settings', saveload:'Save / Load' };
+  const titles = { home:'Home / Office', player:'My Player', development:'Development', team:'Team', schedule:'Schedule', contracts:'Contracts', stats:'Stats', awards:'Awards & Honors', transactions:'Transactions', relationships:'Relationships', milestones:'Milestones', legacy:'Legacy Report', settings:'Settings', saveload:'Save / Load' };
   document.getElementById('page-title').textContent = titles[page]||page;
   renderPage(page);
 }
 function renderPage(page) {
   const c = document.getElementById('main-content');
-  const r = { home:renderHomePage, player:renderPlayerPage, development:renderDevelopmentPage, team:renderTeamPage, schedule:renderSchedulePage, contracts:renderContractsPage, stats:renderStatsPage, awards:renderAwardsPage, transactions:renderTransactionsPage, relationships:renderRelationshipsPage, milestones:renderMilestonesPage, settings:renderSettingsPage, saveload:renderSaveLoadPage };
+  const r = { home:renderHomePage, player:renderPlayerPage, development:renderDevelopmentPage, team:renderTeamPage, schedule:renderSchedulePage, contracts:renderContractsPage, stats:renderStatsPage, awards:renderAwardsPage, transactions:renderTransactionsPage, relationships:renderRelationshipsPage, milestones:renderMilestonesPage, legacy:renderLegacyPage, settings:renderSettingsPage, saveload:renderSaveLoadPage };
   (r[page]||renderPlaceholder)(c, page);
 }
 function renderPlaceholder(c, page) {
@@ -1157,45 +1228,75 @@ function relMeterHTML(name, val) {
 
 function renderRetiredHomePage(c) {
   const p = G.player;
-  const allStars = G.career.awards.filter(a=>a.name==='All-Star').length;
-  const mvps = G.career.awards.filter(a=>a.name==='MVP').length;
-  const rings = G.career.awards.filter(a=>a.name==='Championship').length;
-  let legacy = 'Journeyman';
-  if (mvps >= 3 && rings >= 2) legacy = 'All-Time Great';
-  else if (mvps >= 1 || (allStars >= 8 && rings >= 1)) legacy = 'Hall of Famer';
-  else if (allStars >= 5) legacy = 'Franchise Legend';
-  else if (allStars >= 3) legacy = 'Star Player';
-  else if (G.pro.seasonsPlayed >= 10) legacy = 'Respected Veteran';
+  const ldata = computeLegacyData();
+
+  const icons = {'All-Time Great':'\u{1F451}','Hall of Famer':'\u{1F31F}','Franchise Legend':'\u{2B50}','Star Player':'\u{1F3C0}','Respected Veteran':'\u{1F3C5}','Journeyman':'\u{1F3C3}'};
+  const isHOF = ldata.legacy === 'All-Time Great' || ldata.legacy === 'Hall of Famer';
+
+  const totalEarnings = (G.pro.transactions||[]).filter(t=>t.salary).reduce((s,t)=>s+(t.salary*t.years),0);
+  const teamsPlayed = [...new Set((G.pro.transactions||[]).filter(t=>t.team).map(t=>t.team))];
 
   c.innerHTML = `
-    <div class="card" style="text-align:center;padding:32px;">
-      <div style="font-size:40px;margin-bottom:12px;">${legacy==='All-Time Great'?'\u{1F451}':legacy==='Hall of Famer'?'\u{1F31F}':'\u{1F3C0}'}</div>
-      <div style="font-size:28px;font-weight:800;color:var(--accent);margin-bottom:4px;">${esc(p.firstName)} ${esc(p.lastName)}</div>
-      <div style="font-size:16px;color:var(--text-secondary);margin-bottom:4px;">${legacy}</div>
-      <div style="font-size:13px;color:var(--text-muted);">${POSITIONS[p.position]?.label} &middot; ${p.heightFt}'${p.heightIn}" &middot; Retired at ${p.age}</div>
+    <div class="legacy-banner ${isHOF?'legacy-hof':''}">
+      <div class="legacy-icon">${icons[ldata.legacy]||'\u{1F3C0}'}</div>
+      <div class="legacy-title">${esc(p.firstName)} ${esc(p.lastName)}</div>
+      <div class="legacy-class">${ldata.legacy}</div>
+      <div class="legacy-sub">${POSITIONS[p.position]?.label} &middot; ${p.heightFt}'${p.heightIn}" &middot; ${p.weight} lbs &middot; Retired at age ${p.age}</div>
+      <div style="display:flex;gap:24px;justify-content:center;margin-top:20px;">
+        ${ringHTML(ldata.peakOvr||p.overallRating,'PEAK','large')} ${ringHTML(p.overallRating,'FINAL')} ${ringHTML(ldata.peakOff||p.offenseRating,'OFF')}
+      </div>
     </div>
-    <div class="card-grid">
+
+    <div class="legacy-stat-grid">
+      <div class="legacy-stat"><div class="ls-val">${G.pro.seasonsPlayed}</div><div class="ls-label">Pro Seasons</div></div>
+      <div class="legacy-stat"><div class="ls-val">${G.career.totalGames}</div><div class="ls-label">Games</div></div>
+      <div class="legacy-stat"><div class="ls-val">${G.career.totalPoints.toLocaleString()}</div><div class="ls-label">Career Points</div></div>
+      <div class="legacy-stat"><div class="ls-val">${G.career.totalRebounds.toLocaleString()}</div><div class="ls-label">Rebounds</div></div>
+      <div class="legacy-stat"><div class="ls-val">${G.career.totalAssists.toLocaleString()}</div><div class="ls-label">Assists</div></div>
+      <div class="legacy-stat"><div class="ls-val">${ldata.allStars}</div><div class="ls-label">All-Stars</div></div>
+      <div class="legacy-stat"><div class="ls-val">${ldata.mvps}</div><div class="ls-label">MVPs</div></div>
+      <div class="legacy-stat"><div class="ls-val">${ldata.rings}</div><div class="ls-label">Rings</div></div>
+    </div>
+
+    ${ldata.peakSeason ? `
+    <div class="card peak-card" style="margin-top:16px;">
+      <div class="card-title" style="color:var(--accent);">Peak Season &mdash; Year ${ldata.peakSeason.year}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-size:15px;font-weight:700;">${esc(ldata.peakSeason.team||'')} &middot; ${ldata.peakSeason.record||''}</div>
+          <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">OVR ${ldata.peakSeason.ovr} &middot; ${(ldata.peakSeason.role||'').charAt(0).toUpperCase()+(ldata.peakSeason.role||'').slice(1)}</div>
+        </div>
+        <div style="display:flex;gap:16px;text-align:center;">
+          ${statBox('PPG',ldata.peakPPG)} ${statBox('RPG',ldata.peakRPG)} ${statBox('APG',ldata.peakAPG)}
+        </div>
+      </div>
+      ${ldata.peakSeason.awards && ldata.peakSeason.awards.length > 0 ? `<div style="margin-top:8px;">${ldata.peakSeason.awards.map(a=>`<span class="badge badge-green" style="margin-right:4px;">${a}</span>`).join('')}</div>` : ''}
+    </div>` : ''}
+
+    <div class="card-grid" style="margin-top:16px;">
       <div class="card">
-        <div class="card-title">Career Numbers</div>
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;text-align:center;">
-          ${statBox('Games', G.career.totalGames)}
-          ${statBox('Points', G.career.totalPoints)}
-          ${statBox('Rebounds', G.career.totalRebounds)}
-          ${statBox('Assists', G.career.totalAssists)}
+        <div class="card-title">Career Averages</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center;">
+          ${statBox('PPG', ldata.careerPPG)} ${statBox('RPG', ldata.careerRPG)} ${statBox('APG', ldata.careerAPG)}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center;margin-top:12px;">
+          ${statBox('FG%', ldata.careerFGPct)} ${statBox('3P%', ldata.career3PPct)} ${statBox('FT%', ldata.careerFTPct)}
         </div>
       </div>
       <div class="card">
-        <div class="card-title">Honors</div>
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;text-align:center;">
-          ${statBox('All-Stars', allStars)}
-          ${statBox('MVPs', mvps)}
-          ${statBox('Rings', rings)}
-          ${statBox('Pro Seasons', G.pro.seasonsPlayed)}
+        <div class="card-title">Career Earnings</div>
+        <div class="earnings-total">$${totalEarnings}M</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${teamsPlayed.length} team${teamsPlayed.length!==1?'s':''} &middot; ${(G.pro.transactions||[]).filter(t=>t.salary).length} contracts</div>
+        <div style="margin-top:12px;font-size:12px;color:var(--text-secondary);">
+          ${teamsPlayed.map(t=>`<span class="badge badge-accent" style="margin:2px 4px 2px 0;">${t}</span>`).join('')}
         </div>
       </div>
     </div>
-    <div class="card"><div class="card-title">Explore Your Legacy</div>
-      <div class="btn-group">
+
+    <div class="card" style="margin-top:16px;">
+      <div class="card-title">Explore Your Legacy</div>
+      <div class="btn-group" style="flex-wrap:wrap;">
+        <button class="btn primary" onclick="navigate('legacy')">Full Legacy Report</button>
         <button class="btn" onclick="navigate('stats')">Career Stats</button>
         <button class="btn" onclick="navigate('awards')">Awards</button>
         <button class="btn" onclick="navigate('milestones')">Milestones</button>
@@ -2003,6 +2104,7 @@ function startDraftDay() {
     if (selected.isPlayer) {
       G.draft.draftPick = pick.pickNum;
       G.draft.draftTeam = pick.teamId;
+      G.draft.draftOvr = G.player.overallRating;
     }
   });
 
@@ -2599,9 +2701,24 @@ function renderAwardsPage(c) {
     c.innerHTML = `<div class="card"><div class="card-title">Awards & Honors</div><div style="font-size:13px;color:var(--text-muted);text-align:center;padding:40px 0;">No awards yet. Keep playing to earn recognition!</div></div>`;
     return;
   }
-  c.innerHTML = `<div class="card"><div class="card-title">Awards & Honors (${awards.length})</div>
-    <table class="stats-table"><thead><tr><th>Award</th><th>Year</th><th>Phase</th><th>Team</th></tr></thead>
-    <tbody>${awards.map(a=>`<tr><td><strong>${esc(a.name)}</strong></td><td>${a.year}</td><td>${{highschool:'HS',college:'College',pro:'Pro'}[a.phase]||a.phase}</td><td>${esc(a.school||a.team||'')}</td></tr>`).join('')}</tbody>
+  const awardIcons = {'Championship':'\u{1F48D}','MVP':'\u{1F3C6}','Finals MVP':'\u{1F947}','All-Star':'\u{2B50}','DPOY':'\u{1F6E1}','Rookie of the Year':'\u{1F31F}','6th Man of the Year':'\u{1F4A5}','Most Improved Player':'\u{1F4C8}','Scoring Champion':'\u{1F525}','Rebound Leader':'\u{1F4AA}','Assist Leader':'\u{1F91D}','All-Pro 1st Team':'\u{1F947}','All-Pro 2nd Team':'\u{1F948}','All-Pro 3rd Team':'\u{1F949}'};
+  const counts = {};
+  awards.forEach(a => counts[a.name] = (counts[a.name]||0)+1);
+  const summary = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+
+  c.innerHTML = `
+    ${summary.length > 0 ? `<div class="card"><div class="card-title">Trophy Case</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;">
+        ${summary.map(([name,count])=>`<div style="padding:12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);text-align:center;">
+          <div style="font-size:24px;margin-bottom:4px;">${awardIcons[name]||'\u{1F3C5}'}</div>
+          <div style="font-size:12px;font-weight:700;">${name}</div>
+          <div style="font-size:18px;font-weight:800;color:var(--accent);">x${count}</div>
+        </div>`).join('')}
+      </div>
+    </div>` : ''}
+    <div class="card"><div class="card-title">All Awards (${awards.length})</div>
+    <table class="stats-table"><thead><tr><th></th><th>Award</th><th>Year</th><th>Phase</th><th>Team</th></tr></thead>
+    <tbody>${awards.map(a=>`<tr><td style="font-size:16px;text-align:center;">${awardIcons[a.name]||'\u{1F3C5}'}</td><td><strong>${esc(a.name)}</strong></td><td>${a.year}</td><td>${{highschool:'HS',college:'College',pro:'Pro'}[a.phase]||a.phase}</td><td>${esc(a.school||a.team||'')}</td></tr>`).join('')}</tbody>
     </table></div>`;
 }
 
@@ -2891,27 +3008,34 @@ function retirePlayer() {
   else if (allStars >= 3) legacy = 'Star Player';
   else if (G.pro.seasonsPlayed >= 10) legacy = 'Respected Veteran';
 
-  let html = `<div class="modal-title">\u{1F44B} Career Over — ${esc(G.player.firstName)} ${esc(G.player.lastName)}</div>
-    <div style="text-align:center;padding:20px;">
-      <div style="font-size:32px;margin-bottom:8px;">${legacy === 'All-Time Great' ? '\u{1F451}' : legacy === 'Hall of Famer' ? '\u{1F31F}' : legacy === 'Franchise Legend' ? '\u{2B50}' : '\u{1F3C0}'}</div>
-      <div style="font-size:24px;font-weight:800;color:var(--accent);margin-bottom:4px;">${legacy}</div>
-      <div style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;">${G.pro.seasonsPlayed} Pro Seasons &middot; Retired at ${G.player.age}</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;text-align:center;margin-bottom:20px;">
+  const ldata = computeLegacyData();
+  const legacyIcons = {'All-Time Great':'\u{1F451}','Hall of Famer':'\u{1F31F}','Franchise Legend':'\u{2B50}','Star Player':'\u{1F3C0}','Respected Veteran':'\u{1F3C5}','Journeyman':'\u{1F3C3}'};
+  const isHOF = legacy === 'All-Time Great' || legacy === 'Hall of Famer';
+
+  let html = `<div class="modal-title">\u{1F44B} Career Over</div>
+    <div style="text-align:center;padding:20px;${isHOF?'background:linear-gradient(135deg,rgba(249,115,22,0.06) 0%,transparent 100%);border-radius:var(--radius);':''}">
+      <div style="font-size:48px;margin-bottom:8px;${isHOF?'filter:drop-shadow(0 4px 12px rgba(249,115,22,0.3));':''}">${legacyIcons[legacy]||'\u{1F3C0}'}</div>
+      <div style="font-size:28px;font-weight:800;color:var(--accent);margin-bottom:2px;">${esc(G.player.firstName)} ${esc(G.player.lastName)}</div>
+      <div style="font-size:18px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">${legacy}</div>
+      <div style="font-size:36px;font-weight:800;color:var(--accent);margin:8px 0;">${ldata.legacyScore}</div>
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:16px;">Legacy Score</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">${G.pro.seasonsPlayed} Pro Seasons &middot; Retired at ${G.player.age}</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;margin-bottom:12px;">
         ${statBox('Games', G.career.totalGames)}
-        ${statBox('Points', G.career.totalPoints)}
-        ${statBox('Rebounds', G.career.totalRebounds)}
-        ${statBox('Assists', G.career.totalAssists)}
+        ${statBox('Points', G.career.totalPoints.toLocaleString())}
+        ${statBox('Rebounds', G.career.totalRebounds.toLocaleString())}
+        ${statBox('Assists', G.career.totalAssists.toLocaleString())}
       </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;text-align:center;margin-bottom:20px;">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;margin-bottom:16px;">
         ${statBox('All-Stars', allStars)}
         ${statBox('MVPs', mvps)}
         ${statBox('Rings', rings)}
         ${statBox('Awards', totalAwards)}
       </div>
-      <div style="font-size:13px;color:var(--text-muted);">Your career is complete. Review your legacy on the Stats, Awards, and Milestones pages.</div>
     </div>
     <div class="btn-group" style="justify-content:center;">
-      <button class="btn primary" onclick="closeModal();updateTopbar();navigate('stats');">View Career Stats ▶</button>
+      <button class="btn primary" onclick="closeModal();updateTopbar();navigate('legacy');">View Legacy Report ▶</button>
+      <button class="btn" onclick="closeModal();updateTopbar();navigate('stats');">Career Stats</button>
     </div>`;
   showModal(html, true);
 }
@@ -3060,6 +3184,334 @@ function renderMilestonesPage(c) {
       <span class="m-age" style="color:var(--text-muted);">Not yet</span>
     </div>`).join('') || '<div style="font-size:13px;color:var(--green);padding:12px;">All milestones achieved!</div>'}
   </div>`;
+}
+
+// ─── LEGACY COMPUTATION ───
+
+function computeLegacyData() {
+  const allStars = G.career.awards.filter(a=>a.name==='All-Star').length;
+  const mvps = G.career.awards.filter(a=>a.name==='MVP').length;
+  const rings = G.career.awards.filter(a=>a.name==='Championship').length;
+  const fmvps = G.career.awards.filter(a=>a.name==='Finals MVP').length;
+  const dpoys = G.career.awards.filter(a=>a.name==='DPOY').length;
+  const allPro1 = G.career.awards.filter(a=>a.name==='All-Pro 1st Team').length;
+  const scoringTitles = G.career.awards.filter(a=>a.name==='Scoring Champion').length;
+
+  let legacy = 'Journeyman';
+  if (mvps >= 3 && rings >= 2) legacy = 'All-Time Great';
+  else if (mvps >= 1 || (allStars >= 8 && rings >= 1)) legacy = 'Hall of Famer';
+  else if (allStars >= 5) legacy = 'Franchise Legend';
+  else if (allStars >= 3) legacy = 'Star Player';
+  else if (G.pro.seasonsPlayed >= 10) legacy = 'Respected Veteran';
+
+  const proStats = G.pro.seasonStats || [];
+  let peakSeason = null, peakOvr = 0, peakOff = 0, peakPPG = '0.0', peakRPG = '0.0', peakAPG = '0.0';
+  let totalFGM = 0, totalFGA = 0, totalTPM = 0, totalTPA = 0, totalFTM = 0, totalFTA = 0;
+  let bestPts = 0, bestReb = 0, bestAst = 0, bestWinStreak = 0;
+
+  proStats.forEach(s => {
+    const gp = s.gp || 1;
+    const ppg = s.pts / gp;
+    if (s.ovr > peakOvr || (s.ovr === peakOvr && ppg > parseFloat(peakPPG))) {
+      peakOvr = s.ovr;
+      peakPPG = ppg.toFixed(1);
+      peakRPG = (s.reb/gp).toFixed(1);
+      peakAPG = (s.ast/gp).toFixed(1);
+      peakSeason = s;
+    }
+    totalFGM += s.fgm||0; totalFGA += s.fga||0;
+    totalTPM += s.tpm||0; totalTPA += s.tpa||0;
+    totalFTM += s.ftm||0; totalFTA += s.fta||0;
+  });
+
+  const allStats = G.career.stats || [];
+  allStats.forEach(s => {
+    if (s.phase === 'pro') {
+      const off = Math.round((s.fgm||0)/(s.fga||1)*100);
+      if (off > peakOff) peakOff = off;
+    }
+  });
+  peakOff = G.player.offenseRating;
+  proStats.forEach(s => {
+    const off = s.ovr; // approximate
+    if (s.ovr && s.ovr > (peakOff||0)) peakOff = s.ovr;
+  });
+
+  const totalGP = G.career.totalGames || 1;
+  const careerPPG = (G.career.totalPoints / totalGP).toFixed(1);
+  const careerRPG = (G.career.totalRebounds / totalGP).toFixed(1);
+  const careerAPG = (G.career.totalAssists / totalGP).toFixed(1);
+  const careerFGPct = totalFGA > 0 ? ((totalFGM/totalFGA)*100).toFixed(1)+'%' : '--';
+  const career3PPct = totalTPA > 0 ? ((totalTPM/totalTPA)*100).toFixed(1)+'%' : '--';
+  const careerFTPct = totalFTA > 0 ? ((totalFTM/totalFTA)*100).toFixed(1)+'%' : '--';
+
+  let legacyScore = 0;
+  legacyScore += allStars * 10;
+  legacyScore += mvps * 30;
+  legacyScore += rings * 25;
+  legacyScore += fmvps * 15;
+  legacyScore += dpoys * 12;
+  legacyScore += allPro1 * 8;
+  legacyScore += scoringTitles * 6;
+  legacyScore += Math.min(G.pro.seasonsPlayed, 20) * 2;
+  legacyScore += Math.min(parseFloat(careerPPG), 30) * 2;
+  legacyScore += peakOvr >= 90 ? 20 : peakOvr >= 80 ? 10 : 0;
+  legacyScore = Math.min(Math.round(legacyScore), 999);
+
+  return {
+    legacy, allStars, mvps, rings, fmvps, dpoys, allPro1, scoringTitles,
+    peakSeason, peakOvr, peakOff, peakPPG, peakRPG, peakAPG,
+    careerPPG, careerRPG, careerAPG, careerFGPct, career3PPct, careerFTPct,
+    legacyScore, proStats,
+  };
+}
+
+// ─── LEGACY PAGE ───
+
+function renderLegacyPage(c) {
+  if (G.phase !== 'retired') {
+    c.innerHTML = `<div class="card"><div class="card-title">Legacy Report</div>
+      <div style="text-align:center;padding:40px 0;">
+        <div style="font-size:40px;margin-bottom:12px;">\u{1F3C6}</div>
+        <div style="font-size:15px;color:var(--text-muted);">Your legacy report will be available after retirement.</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">Keep playing to build your story.</div>
+      </div></div>`;
+    return;
+  }
+
+  const p = G.player;
+  const ldata = computeLegacyData();
+  const proStats = ldata.proStats;
+  const allStats = G.career.stats || [];
+  const totalEarnings = (G.pro.transactions||[]).filter(t=>t.salary).reduce((s,t)=>s+(t.salary*t.years),0);
+  const teamsPlayed = [...new Set((G.pro.transactions||[]).filter(t=>t.team).map(t=>t.team))];
+  const milestones = G.career.milestones || [];
+  const injuries = G.pro.injuries || [];
+
+  const icons = {'All-Time Great':'\u{1F451}','Hall of Famer':'\u{1F31F}','Franchise Legend':'\u{2B50}','Star Player':'\u{1F3C0}','Respected Veteran':'\u{1F3C5}','Journeyman':'\u{1F3C3}'};
+  const isHOF = ldata.legacy === 'All-Time Great' || ldata.legacy === 'Hall of Famer';
+
+  let timelineHTML = '';
+  const hsStats = allStats.filter(s=>s.phase==='highschool');
+  const colStats = allStats.filter(s=>s.phase==='college');
+
+  if (hsStats.length > 0) {
+    const hs = hsStats[hsStats.length-1];
+    const hsgp = hs.gp||1;
+    timelineHTML += `<div class="timeline-item"><div class="ti-phase">High School</div>
+      <div class="ti-title">${esc(hs.school||hs.team||'')}</div>
+      <div class="ti-detail">${hsStats.length} season${hsStats.length!==1?'s':''} &middot; ${(hs.pts/hsgp).toFixed(1)} PPG &middot; Record: ${hs.record||'--'}</div>
+    </div>`;
+  }
+
+  if (colStats.length > 0) {
+    const bestCol = colStats.reduce((best,s) => (s.ovr||0)>(best.ovr||0)?s:best, colStats[0]);
+    const cgp = bestCol.gp||1;
+    const colAwards = G.career.awards.filter(a=>a.phase==='college');
+    timelineHTML += `<div class="timeline-item ${colAwards.length>0?'highlight':''}"><div class="ti-phase">College</div>
+      <div class="ti-title">${esc(bestCol.school||bestCol.team||'')}</div>
+      <div class="ti-detail">${colStats.length} season${colStats.length!==1?'s':''} &middot; ${(bestCol.pts/cgp).toFixed(1)} PPG &middot; OVR ${bestCol.ovr||'--'}</div>
+      ${colAwards.length>0?`<div class="ti-badges">${colAwards.map(a=>`<span class="badge badge-green">${esc(a.name)}</span>`).join('')}</div>`:''}
+    </div>`;
+  }
+
+  const draftPick = G.draft?.draftPick;
+  if (draftPick) {
+    timelineHTML += `<div class="timeline-item highlight"><div class="ti-phase">Draft Day</div>
+      <div class="ti-title">Pick #${draftPick} ${draftPick<=5?'(Top 5)':draftPick<=14?'(Lottery)':draftPick<=30?'(1st Round)':'(2nd Round)'}</div>
+      <div class="ti-detail">Selected by ${esc(G.draft.draftTeam?PRO_TEAMS.find(t=>t.id===G.draft.draftTeam)?.name||'':'')} &middot; OVR ${G.draft.draftOvr||'--'}</div>
+    </div>`;
+  } else if (G.draft?.undrafted) {
+    timelineHTML += `<div class="timeline-item"><div class="ti-phase">Draft Day</div>
+      <div class="ti-title">Undrafted Free Agent</div>
+      <div class="ti-detail">Made the league the hard way</div>
+    </div>`;
+  }
+
+  proStats.forEach((s, i) => {
+    const gp = s.gp||1;
+    const seasonAwards = s.awards || [];
+    const hasRing = seasonAwards.includes('Championship');
+    const hasMVP = seasonAwards.includes('MVP');
+    timelineHTML += `<div class="timeline-item ${hasRing||hasMVP?'highlight':''}"><div class="ti-phase">Pro Season ${i+1}</div>
+      <div class="ti-title">${esc(s.team||'')} &middot; ${s.record||'--'}</div>
+      <div class="ti-detail">${(s.pts/gp).toFixed(1)} PPG &middot; ${(s.reb/gp).toFixed(1)} RPG &middot; ${(s.ast/gp).toFixed(1)} APG &middot; OVR ${s.ovr||'--'}</div>
+      ${seasonAwards.length>0?`<div class="ti-badges">${seasonAwards.map(a=>`<span class="badge ${a==='Championship'||a==='MVP'||a==='Finals MVP'?'badge-accent':a==='All-Star'?'badge-blue':'badge-green'}">${a}</span>`).join('')}</div>`:''}
+    </div>`;
+  });
+
+  timelineHTML += `<div class="timeline-item highlight"><div class="ti-phase">Retirement</div>
+    <div class="ti-title">${ldata.legacy}</div>
+    <div class="ti-detail">Retired at age ${p.age} after ${G.pro.seasonsPlayed} pro seasons</div>
+  </div>`;
+
+  let ovrProgression = '';
+  if (proStats.length > 0) {
+    const maxOvr = Math.max(...proStats.map(s=>s.ovr||0));
+    ovrProgression = `<div class="card"><div class="card-title">OVR Progression</div>
+      <div style="display:flex;align-items:flex-end;gap:4px;height:120px;padding:8px 0;">
+        ${proStats.map((s,i)=>{
+          const h = maxOvr > 0 ? Math.round((s.ovr/maxOvr)*100) : 0;
+          const col = s.ovr>=80?'var(--green)':s.ovr>=65?'var(--yellow)':'var(--red)';
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">
+            <div style="font-size:10px;font-weight:700;color:${col};">${s.ovr}</div>
+            <div style="width:100%;height:${h}%;background:${col};border-radius:3px 3px 0 0;min-height:4px;transition:height 0.3s;"></div>
+            <div style="font-size:9px;color:var(--text-muted);">Y${i+1}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  let ppgProgression = '';
+  if (proStats.length > 0) {
+    const maxPPG = Math.max(...proStats.map(s=>s.gp>0?s.pts/s.gp:0));
+    ppgProgression = `<div class="card"><div class="card-title">PPG Progression</div>
+      <div style="display:flex;align-items:flex-end;gap:4px;height:120px;padding:8px 0;">
+        ${proStats.map((s,i)=>{
+          const ppg = s.gp>0?s.pts/s.gp:0;
+          const h = maxPPG > 0 ? Math.round((ppg/maxPPG)*100) : 0;
+          const col = ppg>=20?'var(--green)':ppg>=12?'var(--yellow)':'var(--text-muted)';
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">
+            <div style="font-size:10px;font-weight:700;color:${col};">${ppg.toFixed(1)}</div>
+            <div style="width:100%;height:${h}%;background:${col};border-radius:3px 3px 0 0;min-height:4px;"></div>
+            <div style="font-size:9px;color:var(--text-muted);">Y${i+1}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  const awardCounts = {};
+  G.career.awards.forEach(a => { awardCounts[a.name] = (awardCounts[a.name]||0) + 1; });
+  const awardSummary = Object.entries(awardCounts).sort((a,b)=>b[1]-a[1]);
+
+  let narrative = generateNarrative(p, ldata, totalEarnings, teamsPlayed, injuries);
+
+  c.innerHTML = `
+    <div class="legacy-banner ${isHOF?'legacy-hof':''}">
+      <div class="legacy-icon">${icons[ldata.legacy]||'\u{1F3C0}'}</div>
+      <div class="legacy-title">${esc(p.firstName)} ${esc(p.lastName)}</div>
+      <div class="legacy-class">${ldata.legacy}</div>
+      <div style="font-size:40px;font-weight:800;color:var(--accent);margin-top:8px;">${ldata.legacyScore}</div>
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Legacy Score</div>
+    </div>
+
+    <div class="card"><div class="card-title">Career Narrative</div>
+      <div style="font-size:14px;color:var(--text-secondary);line-height:1.7;">${narrative}</div>
+    </div>
+
+    <div class="card-grid">
+      ${ovrProgression}
+      ${ppgProgression}
+    </div>
+
+    <div class="card"><div class="card-title">Career Timeline</div>
+      <div class="timeline">${timelineHTML}</div>
+    </div>
+
+    ${awardSummary.length > 0 ? `<div class="card"><div class="card-title">Award Cabinet</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;">
+        ${awardSummary.map(([name,count])=>{
+          const ico = name==='Championship'?'\u{1F48D}':name==='MVP'?'\u{1F3C6}':name==='All-Star'?'\u{2B50}':name==='Finals MVP'?'\u{1F947}':name==='DPOY'?'\u{1F6E1}':name==='Rookie of the Year'?'\u{1F31F}':'\u{1F3C5}';
+          return `<div style="padding:12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);text-align:center;">
+            <div style="font-size:24px;margin-bottom:4px;">${ico}</div>
+            <div style="font-size:13px;font-weight:700;">${name}</div>
+            <div style="font-size:20px;font-weight:800;color:var(--accent);">x${count}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : ''}
+
+    <div class="card-grid">
+      <div class="card"><div class="card-title">Career Averages</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center;">
+          ${statBox('PPG', ldata.careerPPG)} ${statBox('RPG', ldata.careerRPG)} ${statBox('APG', ldata.careerAPG)}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center;margin-top:12px;">
+          ${statBox('FG%', ldata.careerFGPct)} ${statBox('3P%', ldata.career3PPct)} ${statBox('FT%', ldata.careerFTPct)}
+        </div>
+      </div>
+      <div class="card"><div class="card-title">Career Earnings & Teams</div>
+        <div class="earnings-total">$${totalEarnings}M</div>
+        <div style="font-size:12px;color:var(--text-muted);margin:4px 0 12px;">${teamsPlayed.length} team${teamsPlayed.length!==1?'s':''} &middot; ${injuries.length} injur${injuries.length!==1?'ies':'y'}</div>
+        ${teamsPlayed.map(t=>`<span class="badge badge-accent" style="margin:2px 4px 2px 0;">${t}</span>`).join('')}
+      </div>
+    </div>
+
+    <div class="card"><div class="card-title">Season-by-Season</div>
+      <div style="overflow-x:auto;">
+      <table class="stats-table">
+        <thead><tr><th>Yr</th><th>Team</th><th class="num">GP</th><th class="num">PPG</th><th class="num">RPG</th><th class="num">APG</th><th class="num">FG%</th><th class="num">OVR</th><th>Rec</th><th>Awards</th></tr></thead>
+        <tbody>
+        ${proStats.map((s,i)=>{
+          const gp=s.gp||1;
+          const awds=(s.awards||[]).map(a=>`<span class="badge badge-green" style="margin:1px;">${a}</span>`).join('');
+          return `<tr ${s===ldata.peakSeason?'style="background:var(--accent-dim);"':''}>
+            <td>${i+1}</td><td>${esc(s.team||'')}</td><td class="num">${s.gp}</td>
+            <td class="num"><strong>${(s.pts/gp).toFixed(1)}</strong></td><td class="num">${(s.reb/gp).toFixed(1)}</td><td class="num">${(s.ast/gp).toFixed(1)}</td>
+            <td class="num">${s.fga>0?((s.fgm/s.fga)*100).toFixed(1)+'%':'--'}</td>
+            <td class="num">${s.ovr||'--'}</td><td>${s.record||''}</td><td>${awds||'--'}</td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>
+      </div>
+    </div>
+  `;
+}
+
+function generateNarrative(p, ldata, totalEarnings, teamsPlayed, injuries) {
+  const name = esc(p.firstName) + ' ' + esc(p.lastName);
+  const pos = POSITIONS[p.position]?.label || p.position;
+  let text = '';
+
+  text += `${name} was a ${pos} who stood ${p.heightFt}'${p.heightIn}" and weighed ${p.weight} lbs, hailing from ${esc(p.hometown||'parts unknown')}. `;
+
+  if (G.draft?.draftPick) {
+    text += `Selected with the #${G.draft.draftPick} pick, `;
+  } else {
+    text += `Going undrafted, `;
+  }
+  text += `${p.firstName} carved out a ${G.pro.seasonsPlayed}-year professional career. `;
+
+  if (ldata.peakSeason) {
+    text += `The peak came in Year ${ldata.peakSeason.year}, when ${p.firstName} averaged ${ldata.peakPPG} points per game at an overall rating of ${ldata.peakOvr}. `;
+  }
+
+  if (ldata.rings > 0) {
+    text += `${p.firstName} won ${ldata.rings} championship${ldata.rings>1?'s':''}, cementing a legacy of winning. `;
+  }
+  if (ldata.mvps > 0) {
+    text += `With ${ldata.mvps} MVP award${ldata.mvps>1?'s':''}, ${p.firstName} proved to be among the very best. `;
+  }
+  if (ldata.allStars > 0) {
+    text += `A ${ldata.allStars}-time All-Star selection speaks to years of elite play. `;
+  }
+
+  if (teamsPlayed.length > 1) {
+    text += `Over the course of the career, ${p.firstName} suited up for ${teamsPlayed.length} different teams. `;
+  } else if (teamsPlayed.length === 1) {
+    text += `A loyal one-team player, ${p.firstName} spent the entire career with the ${teamsPlayed[0]}. `;
+  }
+
+  if (injuries.length > 0) {
+    const severe = injuries.filter(i=>i.severity==='severe').length;
+    if (severe > 0) {
+      text += `The career was tested by ${severe} severe injur${severe>1?'ies':'y'}, but ${p.firstName} always fought back. `;
+    }
+  }
+
+  text += `Retiring at age ${p.age} with a career average of ${ldata.careerPPG} points, ${ldata.careerRPG} rebounds, and ${ldata.careerAPG} assists per game, `;
+
+  if (ldata.legacy === 'All-Time Great') text += `${name} goes down as one of the all-time greats the game has ever seen.`;
+  else if (ldata.legacy === 'Hall of Famer') text += `${name} has earned a place in the Hall of Fame.`;
+  else if (ldata.legacy === 'Franchise Legend') text += `${name} will forever be remembered as a franchise legend.`;
+  else if (ldata.legacy === 'Star Player') text += `${name} leaves the game as a respected star who made a real impact.`;
+  else if (ldata.legacy === 'Respected Veteran') text += `${name} earned the respect of teammates and fans through years of dedicated service.`;
+  else text += `${name} may not have been a superstar, but every minute on the court was earned.`;
+
+  return text;
 }
 
 // ─── INIT ───
