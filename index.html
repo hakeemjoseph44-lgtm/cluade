@@ -817,7 +817,7 @@ function defaultState() {
       milestoneFlags: {},
     },
     settings: { simSpeed: 'normal', difficulty: 'normal' },
-    _weekAlloc: [3, 1, 1, 2],
+    _weekAlloc: [2, 1, 1, 1, 2],
   };
 }
 
@@ -1452,13 +1452,19 @@ function renderDevelopmentPage(c) {
   }
 
   const inj = G.phase === 'pro' ? G.pro.currentInjury : null;
-  const names = ['Practice', 'Film Study', 'Strength & Conditioning', 'Social / Rest'];
-  const icons = ['\u{1F3C0}','\u{1F4FA}','\u{1F4AA}','\u{1F6CC}'];
-  const descs = ['Improve shooting, ball handling, and skill attributes','Boost basketball IQ (small chance to improve any attribute)','Build speed, strength, stamina, and vertical','Recover fatigue, prevent burnout, boost morale'];
+  const names = ['Practice', 'Film Study', 'Strength & Conditioning', 'Defense Drills', 'Social / Rest'];
+  const icons = ['\u{1F3C0}','\u{1F4FA}','\u{1F4AA}','\u{1F6E1}','\u{1F6CC}'];
+  const descs = ['Improve shooting, ball handling, and offensive skills','Boost basketball IQ (small chance to improve any attribute)','Build speed, strength, stamina, and vertical','Improve defensive attributes: perimeter, interior, steals, blocks','Recover fatigue, prevent burnout, boost morale'];
   const maxSessions = getWeeklySessions();
-  if(!G._weekAlloc) G._weekAlloc=[Math.floor(maxSessions*0.4),1,1,maxSessions-Math.floor(maxSessions*0.4)-2];
+  if(!G._weekAlloc || G._weekAlloc.length < 5) {
+    const old = G._weekAlloc || [];
+    G._weekAlloc = [old[0]||2, old[1]||1, old[2]||1, 1, old[3]||Math.max(1, maxSessions-5)];
+    const t = G._weekAlloc.reduce((s,v)=>s+v,0);
+    if (t > maxSessions) G._weekAlloc[4] = Math.max(0, G._weekAlloc[4] - (t - maxSessions));
+    if (t < maxSessions) G._weekAlloc[4] += (maxSessions - t);
+  }
   const alloc = G._weekAlloc, total = alloc.reduce((s,v)=>s+v,0);
-  if (total > maxSessions) { const excess = total - maxSessions; alloc[3] = Math.max(0, alloc[3] - excess); }
+  if (total > maxSessions) { const excess = total - maxSessions; alloc[4] = Math.max(0, alloc[4] - excess); }
   const seasonOver = G.season.week > G.season.maxWeeks;
   const motInfo = getMotivationLabel(G.player.motivation||70);
 
@@ -1471,7 +1477,7 @@ function renderDevelopmentPage(c) {
         <span style="font-size:12px;color:var(--text-muted);">Fatigue: ${G.player.fatigue||0}% &middot; Morale: ${G.player.morale||80}% &middot; Motivation: <span style="color:${motInfo.color};">${motInfo.label}</span></span>
       </div>
       ${names.map((name,i)=>{
-        const locked = inj && (i === 0 || i === 2);
+        const locked = inj && (i === 0 || i === 2 || i === 3);
         const curTotal = alloc.reduce((s,v)=>s+v,0);
         return `
         <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);${locked?'opacity:0.4;':''}">
@@ -1495,7 +1501,7 @@ function renderDevelopmentPage(c) {
     <div class="card" id="week-results" style="display:none;"><div class="card-title">Results</div><div id="week-results-content"></div></div>
   `;
 }
-function adjAlloc(i,d) { if(!G._weekAlloc)G._weekAlloc=[3,1,1,2]; const a=G._weekAlloc,t=a.reduce((s,v)=>s+v,0),max=getWeeklySessions(); if(d>0&&t>=max)return; if(d<0&&a[i]<=0)return; a[i]+=d; renderDevelopmentPage(document.getElementById('main-content')); }
+function adjAlloc(i,d) { if(!G._weekAlloc||G._weekAlloc.length<5)G._weekAlloc=[2,1,1,1,2]; const a=G._weekAlloc,t=a.reduce((s,v)=>s+v,0),max=getWeeklySessions(); if(d>0&&t>=max)return; if(d<0&&a[i]<=0)return; a[i]+=d; renderDevelopmentPage(document.getElementById('main-content')); }
 
 function getNextGameInfo() {
   const g = G.season.schedule[G.season.nextGameIdx];
@@ -1505,27 +1511,39 @@ function getNextGameInfo() {
 function simWeek() {
   if(!G||G.season.week>G.season.maxWeeks) return;
   const results = [];
-  const alloc = G._weekAlloc||[3,1,1,2];
+  const alloc = G._weekAlloc||[2,1,1,1,2];
   const a = G.player.attributes, caps = G.player.potentialCaps;
   const phase = G.phase;
   const injured = phase === 'pro' && G.pro.currentInjury;
   const devMul = phase==='highschool' ? (HIGH_SCHOOLS.find(h=>h.id===G.highSchool.school)?.devBonus||1)
     : phase==='college' ? (COLLEGE_PROGRAMS.find(p=>p.id===G.college.school)?.coach.devBonus||1) : 0.7;
 
+  const mot = G.player.motivation || 70;
+  const morale = G.player.morale || 80;
+  const fatigue = G.player.fatigue || 0;
+  const motMul = mot >= 80 ? 1.15 : mot >= 60 ? 1.0 : mot >= 40 ? 0.85 : 0.65;
+  const moraleMul = morale >= 70 ? 1.1 : morale >= 40 ? 1.0 : 0.8;
+  const fatigueMul = fatigue >= 80 ? 0.6 : fatigue >= 50 ? 0.8 : 1.0;
+  const trainChanceMod = motMul * moraleMul * fatigueMul;
+
   if (injured) {
-    for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key; if(Math.random()<0.2&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+1);results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1 (Film Study)');}}
+    for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key; if(Math.random()<0.2*trainChanceMod&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+1);results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1 (Film Study)');}}
     results.push(`Injured (${G.pro.currentInjury.type}) — limited to film study only`);
   } else {
     const offKeys = ['closeShot','midRange','threePoint','freeThrow','layup','dunk','ballHandling','passing'];
+    const defKeys = ['interiorDef','perimeterDef','rebounding','steal','block'];
     const physKeys = ['speed','strength','stamina','vertical'];
-    for(let s=0;s<alloc[0];s++){const k=randFrom(offKeys); if(Math.random()<0.55&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+Math.round(devMul));results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1');}}
-    for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key; if(Math.random()<0.25&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+1);results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1 (IQ)');}}
-    for(let s=0;s<alloc[2];s++){const k=randFrom(physKeys); if(Math.random()<0.55&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+Math.round(devMul));results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1');}}
+    for(let s=0;s<alloc[0];s++){const k=randFrom(offKeys); if(Math.random()<0.55*trainChanceMod&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+Math.round(devMul));results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1');}}
+    for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key; if(Math.random()<0.25*trainChanceMod&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+1);results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1 (IQ)');}}
+    for(let s=0;s<alloc[2];s++){const k=randFrom(physKeys); if(Math.random()<0.55*trainChanceMod&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+Math.round(devMul));results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1');}}
+    for(let s=0;s<alloc[3];s++){const k=randFrom(defKeys); if(Math.random()<0.55*trainChanceMod&&a[k]<caps[k]){a[k]=Math.min(caps[k],a[k]+Math.round(devMul));results.push(ATTRIBUTES.find(x=>x.key===k).name+' +1 (Defense)');}}
   }
 
-  const restSessions = alloc[3];
+  if (trainChanceMod < 0.85) results.push(`Training reduced (${fatigue>=50?'tired ':''}${morale<40?'low morale ':''}${mot<40?'unmotivated':''})`);
+
+  const restSessions = alloc[4];
   const maxSess = getWeeklySessions();
-  const workSessions = alloc[0] + alloc[1] + alloc[2];
+  const workSessions = alloc[0] + alloc[1] + alloc[2] + alloc[3];
   G.player.fatigue = clamp((G.player.fatigue||0) + (injured ? -8 : workSessions * 2 - restSessions * 5), 0, 100);
   G.player.morale = clamp((G.player.morale||80) + restSessions * 3 - (G.player.fatigue > 60 ? 5 : 0) - (injured ? 3 : 0), 20, 100);
   if(restSessions>=2 && !injured) results.push('Well-rested (fatigue -' + (restSessions*5) + '%)');
@@ -1597,24 +1615,28 @@ function simToNextGame() {
 }
 
 function simWeekSilent() {
-  const alloc = G._weekAlloc||[3,1,1,2];
+  const alloc = G._weekAlloc||[2,1,1,1,2];
   const a = G.player.attributes, caps = G.player.potentialCaps;
   const injured = G.phase === 'pro' && G.pro.currentInjury;
   const devMul = G.phase==='highschool'?(HIGH_SCHOOLS.find(h=>h.id===G.highSchool.school)?.devBonus||1)
     :G.phase==='college'?(COLLEGE_PROGRAMS.find(p=>p.id===G.college.school)?.coach.devBonus||1):0.7;
+  const mot=G.player.motivation||70, morale=G.player.morale||80, fatigue=G.player.fatigue||0;
+  const trainMod=(mot>=80?1.15:mot>=60?1.0:mot>=40?0.85:0.65)*(morale>=70?1.1:morale>=40?1.0:0.8)*(fatigue>=80?0.6:fatigue>=50?0.8:1.0);
   if (!injured) {
     const offKeys=['closeShot','midRange','threePoint','freeThrow','layup','dunk','ballHandling','passing'];
+    const defKeys=['interiorDef','perimeterDef','rebounding','steal','block'];
     const physKeys=['speed','strength','stamina','vertical'];
-    for(let s=0;s<alloc[0];s++){const k=randFrom(offKeys);if(Math.random()<0.55&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+Math.round(devMul));}
-    for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key;if(Math.random()<0.25&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+1);}
-    for(let s=0;s<alloc[2];s++){const k=randFrom(physKeys);if(Math.random()<0.55&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+Math.round(devMul));}
+    for(let s=0;s<alloc[0];s++){const k=randFrom(offKeys);if(Math.random()<0.55*trainMod&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+Math.round(devMul));}
+    for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key;if(Math.random()<0.25*trainMod&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+1);}
+    for(let s=0;s<alloc[2];s++){const k=randFrom(physKeys);if(Math.random()<0.55*trainMod&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+Math.round(devMul));}
+    for(let s=0;s<alloc[3];s++){const k=randFrom(defKeys);if(Math.random()<0.55*trainMod&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+Math.round(devMul));}
   } else {
-    for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key;if(Math.random()<0.2&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+1);}
+    for(let s=0;s<alloc[1];s++){const k=randFrom(ATTRIBUTES).key;if(Math.random()<0.2*trainMod&&a[k]<caps[k])a[k]=Math.min(caps[k],a[k]+1);}
   }
-  const workSess=alloc[0]+alloc[1]+alloc[2];
-  G.player.fatigue=clamp((G.player.fatigue||0)+(injured?-8:workSess*2-alloc[3]*5),0,100);
-  G.player.morale=clamp((G.player.morale||80)+alloc[3]*3-(G.player.fatigue>60?5:0)-(injured?3:0),20,100);
-  let motD=0; if(G.player.morale>=70)motD+=1; if(G.player.morale<=30)motD-=2; if(G.player.fatigue>=70)motD-=1; if(alloc[3]>=3)motD+=1;
+  const workSess=alloc[0]+alloc[1]+alloc[2]+alloc[3];
+  G.player.fatigue=clamp((G.player.fatigue||0)+(injured?-8:workSess*2-alloc[4]*5),0,100);
+  G.player.morale=clamp((G.player.morale||80)+alloc[4]*3-(G.player.fatigue>60?5:0)-(injured?3:0),20,100);
+  let motD=0; if(G.player.morale>=70)motD+=1; if(G.player.morale<=30)motD-=2; if(G.player.fatigue>=70)motD-=1; if(alloc[4]>=3)motD+=1;
   G.player.motivation=clamp((G.player.motivation||70)+motD,0,100);
   if (G.phase === 'pro' && G.pro.currentInjury) {
     G.pro.currentInjury.weeksLeft--;
@@ -1653,7 +1675,13 @@ function simGame(schedEntry) {
   const a = G.player.attributes, p = G.player;
   const off = p.offenseRating, def = p.defenseRating, ovr = p.overallRating;
   const oppStr = schedEntry.oppStrength;
-  const fatiguePenalty = (G.player.fatigue||0) > 50 ? (G.player.fatigue - 50) * 0.15 : 0;
+  const fatigue = G.player.fatigue || 0;
+  const morale = G.player.morale || 80;
+  const mot = G.player.motivation || 70;
+  const fatiguePenalty = fatigue > 30 ? (fatigue - 30) * 0.2 : 0;
+  const moraleMod = morale >= 70 ? 1.08 : morale >= 40 ? 1.0 : 0.88;
+  const motMod = mot >= 80 ? 1.05 : mot >= 40 ? 1.0 : 0.9;
+  const conditionMod = moraleMod * motMod;
 
   let baseMin;
   if (G.phase === 'pro') {
@@ -1663,14 +1691,14 @@ function simGame(schedEntry) {
   } else {
     baseMin = clamp(16 + (ovr - 30) * 0.3, 12, 36);
   }
-  const min = clamp(Math.round(baseMin + randInt(-4,4) - fatiguePenalty*0.2), 8, 40);
+  const min = clamp(Math.round(baseMin + randInt(-4,4) - fatiguePenalty*0.3), 8, 40);
   const minFactor = min / 36;
 
-  const fga = clamp(Math.round((8 + off*0.08) * minFactor + randInt(-3,3)), 2, 30);
+  const fga = clamp(Math.round((8 + off*0.08) * minFactor * conditionMod + randInt(-3,3)), 2, 30);
   const tpa = clamp(Math.round(fga * (a.threePoint||25)/120 + randInt(-1,2)), 0, fga);
   const twoa = fga - tpa;
-  const fgPct = clamp(((a.closeShot+a.midRange+a.layup)/3*0.008 + 0.1 - oppStr*0.002 - fatiguePenalty*0.005 + Math.random()*0.15), 0.2, 0.7);
-  const tpPct = clamp((a.threePoint*0.006 + 0.05 - oppStr*0.001 + Math.random()*0.12), 0.15, 0.55);
+  const fgPct = clamp(((a.closeShot+a.midRange+a.layup)/3*0.008 + 0.1 - oppStr*0.002 - fatiguePenalty*0.005) * conditionMod + Math.random()*0.15, 0.2, 0.7);
+  const tpPct = clamp((a.threePoint*0.006 + 0.05 - oppStr*0.001) * conditionMod + Math.random()*0.12, 0.15, 0.55);
   const twom = Math.round(twoa * fgPct);
   const tpm = Math.round(tpa * tpPct);
   const fgm = twom + tpm;
@@ -1678,10 +1706,10 @@ function simGame(schedEntry) {
   const ftPct = clamp(a.freeThrow*0.008 + 0.2 + Math.random()*0.1, 0.4, 0.95);
   const ftm = Math.round(fta * ftPct);
   const pts = twom*2 + tpm*3 + ftm;
-  const reb = clamp(Math.round(((a.rebounding||25)*0.08 + (a.strength||25)*0.02) * minFactor + randInt(-2,3)), 0, 20);
-  const ast = clamp(Math.round(((a.passing||25)*0.07 + (a.ballHandling||25)*0.02) * minFactor + randInt(-2,3)), 0, 15);
-  const stl = clamp(Math.round((a.steal||25)*0.03 * minFactor + randInt(0,2)), 0, 7);
-  const blk = clamp(Math.round((a.block||25)*0.025 * minFactor + randInt(0,2)), 0, 7);
+  const reb = clamp(Math.round(((a.rebounding||25)*0.08 + (a.strength||25)*0.02) * minFactor * conditionMod + randInt(-2,3)), 0, 20);
+  const ast = clamp(Math.round(((a.passing||25)*0.07 + (a.ballHandling||25)*0.02) * minFactor * conditionMod + randInt(-2,3)), 0, 15);
+  const stl = clamp(Math.round((a.steal||25)*0.03 * minFactor * conditionMod + randInt(0,2)), 0, 7);
+  const blk = clamp(Math.round((a.block||25)*0.025 * minFactor * conditionMod + randInt(0,2)), 0, 7);
 
   let teamOvr;
   if (G.phase === 'pro' && G.pro.roster && G.pro.roster.length > 0) {
