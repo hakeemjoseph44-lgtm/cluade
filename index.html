@@ -252,6 +252,12 @@ body { font-family: var(--font); background: var(--bg-darkest); color: var(--tex
 .fa-offer { padding: 16px; background: var(--bg-input); border: 2px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: all 0.15s; margin-bottom: 10px; }
 .fa-offer:hover { border-color: var(--text-muted); }
 .fa-offer.selected { border-color: var(--accent); background: var(--accent-dim); }
+.event-banner { padding: 16px; background: var(--bg-panel); border: 1px solid var(--border-light); border-radius: var(--radius); margin-bottom: 12px; border-left: 3px solid var(--accent); }
+.event-choice { padding: 12px 16px; background: var(--bg-input); border: 2px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: all 0.15s; margin-bottom: 8px; }
+.event-choice:hover { border-color: var(--accent); background: var(--accent-dim); }
+.event-outcome { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.trade-package { padding: 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; }
+.counter-offer { padding: 12px; background: var(--yellow-dim); border: 1px solid var(--yellow); border-radius: var(--radius-sm); margin-top: 12px; }
 
 .aging-bar { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
 .aging-bar .phase-label { font-size: 11px; color: var(--text-muted); min-width: 50px; }
@@ -429,6 +435,7 @@ body { font-family: var(--font); background: var(--bg-darkest); color: var(--tex
       <div class="sidebar-section-title">More</div>
       <div class="sidebar-item" data-page="relationships" onclick="navigate('relationships')"><span class="icon">&#9825;</span> Relationships</div>
       <div class="sidebar-item" data-page="milestones" onclick="navigate('milestones')"><span class="icon">&#10003;</span> Milestones</div>
+      <div class="sidebar-item" data-page="events" onclick="navigate('events')"><span class="icon">&#9888;</span> Events</div>
       <div class="sidebar-item" data-page="legacy" onclick="navigate('legacy')"><span class="icon">&#9812;</span> Legacy Report</div>
       <div class="sidebar-item" data-page="settings" onclick="navigate('settings')"><span class="icon">&#9881;</span> Settings</div>
       <div class="sidebar-item" data-page="saveload" onclick="navigate('saveload')"><span class="icon">&#9776;</span> Save / Load</div>
@@ -677,6 +684,187 @@ const INJURIES = [
 ];
 const INJURY_SEVERITY_ORDER = { 'day-to-day': 0, minor: 1, moderate: 2, severe: 3 };
 
+const CAREER_EVENTS = [
+  { id:'media_hot_streak', cat:'media', title:'Hot Streak Interview', desc:'A reporter asks about your recent hot streak.',
+    cond: g => g.phase==='pro' && g.pro.currentSeasonStats.gp>=5 && g.pro.currentSeasonStats.pts/g.pro.currentSeasonStats.gp>=20,
+    choices:[
+      { text:'Stay humble: "I credit my teammates"', fx:{ teammates:5, fans:2, motivation:3 } },
+      { text:'Be confident: "I\'m just getting started"', fx:{ fans:5, motivation:5, coach:-2 } },
+      { text:'Deflect: "We just focus on winning"', fx:{ coach:3, frontOffice:2 } },
+    ]},
+  { id:'media_slump', cat:'media', title:'Slump Questions', desc:'Media is grilling you about your recent poor play.',
+    cond: g => g.phase==='pro' && g.pro.currentSeasonStats.gp>=10 && g.pro.currentSeasonStats.pts/g.pro.currentSeasonStats.gp<12 && g.pro.role!=='bench',
+    choices:[
+      { text:'Accept responsibility and promise improvement', fx:{ coach:5, morale:5, fans:3 } },
+      { text:'Blame the system and schemes', fx:{ coach:-8, fans:-3, motivation:3 } },
+      { text:'No comment — let the play speak', fx:{ motivation:2, morale:3 } },
+    ]},
+  { id:'teammate_mentor', cat:'teammate', title:'Veteran Mentorship', desc:'A veteran teammate offers to mentor you during extra workouts.',
+    cond: g => g.phase==='pro' && g.pro.seasonsPlayed<=3,
+    choices:[
+      { text:'Gratefully accept the mentorship', fx:{ teammates:8, attrBoost:['ballHandling','passing'], boostAmt:2, motivation:5 } },
+      { text:'Politely decline — you prefer your own routine', fx:{ motivation:2 } },
+    ]},
+  { id:'teammate_conflict', cat:'teammate', title:'Locker Room Tension', desc:'A teammate calls you out for not passing enough.',
+    cond: g => g.phase==='pro' && g.pro.currentSeasonStats.gp>=5 && g.pro.currentSeasonStats.ast/g.pro.currentSeasonStats.gp<3,
+    choices:[
+      { text:'Apologize and promise to be more unselfish', fx:{ teammates:6, coach:3, motivation:-2 } },
+      { text:'Fire back: "Get open and I\'ll find you"', fx:{ teammates:-5, fans:2, motivation:5 } },
+      { text:'Talk it out privately after practice', fx:{ teammates:4, coach:2, morale:5 } },
+    ]},
+  { id:'teammate_chemistry', cat:'teammate', title:'Team Dinner', desc:'A group of teammates invites you out for a team dinner.',
+    cond: g => g.phase==='pro',
+    choices:[
+      { text:'Join and pick up the tab', fx:{ teammates:8, fans:2, morale:5 } },
+      { text:'Join but keep it low-key', fx:{ teammates:5, morale:3 } },
+      { text:'Skip it — need to rest', fx:{ teammates:-3, fatigue:-8 } },
+    ]},
+  { id:'endorsement_shoe', cat:'endorsement', title:'Shoe Deal Offer', desc:'A major shoe company wants to sign you to an endorsement deal.',
+    cond: g => g.phase==='pro' && g.player.overallRating>=75 && !g.pro._hasEndorsement,
+    choices:[
+      { text:'Sign the deal — big money and exposure', fx:{ fans:10, motivation:8, endorsement:true, morale:5 } },
+      { text:'Hold out for a better offer', fx:{ motivation:3 } },
+    ]},
+  { id:'endorsement_local', cat:'endorsement', title:'Local Business Endorsement', desc:'A local business wants you as their spokesperson.',
+    cond: g => g.phase==='pro' && g.player.overallRating>=60,
+    choices:[
+      { text:'Accept the deal — good community ties', fx:{ fans:8, frontOffice:3, morale:3 } },
+      { text:'Turn it down — not worth the time', fx:{} },
+    ]},
+  { id:'coach_system', cat:'coach', title:'Coach Wants to Change Your Role', desc:'The coach wants to adjust your playing style.',
+    cond: g => g.phase==='pro' && g.pro.seasonsPlayed>=2,
+    choices:[
+      { text:'Embrace the new role', fx:{ coach:10, frontOffice:5, attrBoost:['perimeterDef','interiorDef'], boostAmt:1, motivation:3 } },
+      { text:'Push back — your current style works', fx:{ coach:-5, motivation:5, fans:2 } },
+      { text:'Try it for a few games', fx:{ coach:5, morale:3 } },
+    ]},
+  { id:'coach_praise', cat:'coach', title:'Coach Praises You in Press Conference', desc:'Your coach singles you out for exceptional effort.',
+    cond: g => g.phase==='pro' && (g.pro.relationships?.coach||50)>=65,
+    choices:[
+      { text:'Thank the coach and deflect to teammates', fx:{ teammates:5, coach:3, fans:3, morale:5 } },
+      { text:'Own it: "I\'ve been putting in the work"', fx:{ motivation:8, fans:5 } },
+    ]},
+  { id:'coach_benched', cat:'coach', title:'Benched for Discipline', desc:'Coach is unhappy with your effort and benches you.',
+    cond: g => g.phase==='pro' && (g.pro.relationships?.coach||50)<35,
+    choices:[
+      { text:'Accept the punishment and work harder', fx:{ coach:8, motivation:5, morale:-5, fans:-3 } },
+      { text:'Complain publicly about it', fx:{ coach:-10, fans:5, teammates:-5, frontOffice:-5 } },
+    ]},
+  { id:'community_charity', cat:'community', title:'Charity Basketball Camp', desc:'You\'re invited to host a youth basketball camp.',
+    cond: g => g.phase==='pro',
+    choices:[
+      { text:'Host the camp and give back', fx:{ fans:10, morale:8, motivation:5 } },
+      { text:'Donate money but skip the event', fx:{ fans:3 } },
+      { text:'Decline — need to focus on the season', fx:{ fans:-2, fatigue:-5 } },
+    ]},
+  { id:'community_hospital', cat:'community', title:'Hospital Visit Request', desc:'A children\'s hospital asks you to visit young patients.',
+    cond: g => g.phase==='pro',
+    choices:[
+      { text:'Visit and spend the whole afternoon', fx:{ fans:8, morale:10, motivation:5 } },
+      { text:'Send signed merchandise instead', fx:{ fans:3, morale:3 } },
+    ]},
+  { id:'offcourt_party', cat:'off-court', title:'Night Out Gone Wrong', desc:'Paparazzi catch you at a late-night party before a game.',
+    cond: g => g.phase==='pro' && g.season.week>5,
+    choices:[
+      { text:'Issue an apology — it won\'t happen again', fx:{ coach:-3, fans:-5, frontOffice:-3, morale:-5 } },
+      { text:'Ignore it — what you do off-court is your business', fx:{ fans:-8, coach:-5, motivation:2 } },
+    ]},
+  { id:'offcourt_workout', cat:'off-court', title:'Secret Workout Video Goes Viral', desc:'Someone leaked footage of your intense late-night workout.',
+    cond: g => g.phase==='pro',
+    choices:[
+      { text:'Lean into it: "Grind never stops"', fx:{ fans:10, motivation:8, coach:3 } },
+      { text:'Downplay it: "Just normal prep"', fx:{ coach:3, morale:3 } },
+    ]},
+  { id:'contract_extension', cat:'contract', title:'Extension Offer', desc:'The front office offers you a contract extension mid-season.',
+    cond: g => g.phase==='pro' && g.pro.contract && g.pro.contract.years===1 && g.pro.seasonsPlayed>=2 && g.season.week>=10 && g.season.week<=25,
+    choices:[
+      { text:'Accept the extension', fx:{ frontOffice:10, coach:5, fans:5, extension:true } },
+      { text:'Decline — test free agency', fx:{ frontOffice:-5, motivation:5 } },
+      { text:'Counter with a bigger deal', fx:{ frontOffice:-2, counterExtension:true } },
+    ]},
+  { id:'contract_noTrade', cat:'contract', title:'No-Trade Clause Request', desc:'You have leverage to negotiate a no-trade clause.',
+    cond: g => g.phase==='pro' && g.player.overallRating>=80 && g.pro.contract && g.pro.contract.years>=2 && !g.pro.contract.noTrade,
+    choices:[
+      { text:'Request the no-trade clause', fx:{ frontOffice:-3, noTrade:true } },
+      { text:'Skip it — stay flexible', fx:{ frontOffice:3 } },
+    ]},
+  { id:'trade_deadline_buzz', cat:'trade', title:'Trade Deadline Buzz', desc:'Your name is circulating in trade rumors as the deadline approaches.',
+    cond: g => g.phase==='pro' && g.season.week>=20 && g.season.week<=24 && !g.pro.contract?.noTrade,
+    choices:[
+      { text:'Tell media: "I want to stay"', fx:{ fans:5, teammates:3, frontOffice:3 } },
+      { text:'Stay quiet and let things play out', fx:{ motivation:2, morale:-3 } },
+      { text:'Privately tell FO you\'d welcome a contender', fx:{ frontOffice:-5, motivation:5, tradeRequest:true } },
+    ]},
+  { id:'trade_offer_multi', cat:'trade', title:'Multi-Team Trade Scenario', desc:'Three teams are working out a complex trade involving you.',
+    cond: g => g.phase==='pro' && g.pro.seasonsPlayed>=2 && g.season.week>=15 && g.season.week<=25,
+    choices:[
+      { text:'Push for the contending team', fx:{ multiTrade:'contender' } },
+      { text:'Push for the team with the best role', fx:{ multiTrade:'role' } },
+      { text:'Block the trade if you can', fx:{ frontOffice:-8, teammates:5, fans:5 } },
+    ]},
+  { id:'allstar_snub', cat:'media', title:'All-Star Snub', desc:'You were left off the All-Star roster despite strong stats.',
+    cond: g => g.phase==='pro' && g.pro.currentSeasonStats.gp>=20 && g.pro.currentSeasonStats.pts/g.pro.currentSeasonStats.gp>=18 && g.player.overallRating>=73 && g.season.week>=18 && g.season.week<=22,
+    choices:[
+      { text:'Use it as fuel: "I\'ll show them"', fx:{ motivation:10, attrBoost:['closeShot','midRange','threePoint'], boostAmt:1 } },
+      { text:'Take the high road: "Congrats to those selected"', fx:{ fans:5, coach:3, morale:3 } },
+    ]},
+  { id:'hs_scout_visit', cat:'recruit', title:'Scout in the Stands', desc:'A college scout was spotted watching your game tonight.',
+    cond: g => g.phase==='highschool' && g.season.week>=8,
+    choices:[
+      { text:'Play your natural game', fx:{ motivation:5, morale:3 } },
+      { text:'Try to show off your range', fx:{ attrBoost:['threePoint'], boostAmt:1, motivation:3, recruitBoost:5 } },
+    ]},
+  { id:'hs_rival', cat:'off-court', title:'Rivalry Game Hype', desc:'The local news is hyping up your rivalry game this week.',
+    cond: g => g.phase==='highschool' && g.season.week>=10 && g.season.week<=20,
+    choices:[
+      { text:'Channel the energy into preparation', fx:{ motivation:8, morale:5, fatigue:5 } },
+      { text:'Tune out the noise and stay relaxed', fx:{ morale:5, fatigue:-3 } },
+    ]},
+  { id:'college_transfer', cat:'coach', title:'Transfer Portal Temptation', desc:'A bigger program reaches out about transferring.',
+    cond: g => g.phase==='college' && g.college.seasonsPlayed>=1 && g.college.seasonsPlayed<3,
+    choices:[
+      { text:'Stay loyal to your current program', fx:{ coach:10, motivation:5, morale:5 } },
+      { text:'Explore the option (won\'t commit yet)', fx:{ coach:-8, motivation:3, draftStock:3 } },
+    ]},
+  { id:'college_showcase', cat:'media', title:'National TV Game', desc:'Your game this week is being broadcast on national television.',
+    cond: g => g.phase==='college' && g.season.week>=5,
+    choices:[
+      { text:'Embrace the spotlight — big stage, big game', fx:{ motivation:8, draftStock:5, morale:5, fatigue:3 } },
+      { text:'Treat it like any other game', fx:{ morale:5, coach:3 } },
+    ]},
+  { id:'pro_mvp_race', cat:'media', title:'MVP Race Interview', desc:'Reporters ask if you think you deserve the MVP award.',
+    cond: g => g.phase==='pro' && g.pro.currentSeasonStats.gp>=30 && g.pro.currentSeasonStats.pts/g.pro.currentSeasonStats.gp>=25 && g.player.overallRating>=83,
+    choices:[
+      { text:'"I just want to win games"', fx:{ coach:5, teammates:5, fans:3 } },
+      { text:'"I think my numbers speak for themselves"', fx:{ fans:8, motivation:5, teammates:-3 } },
+    ]},
+  { id:'pro_fan_appreciation', cat:'community', title:'Fan Appreciation Night', desc:'The team is honoring you at a fan appreciation event.',
+    cond: g => g.phase==='pro' && g.pro.seasonsPlayed>=3 && (g.pro.relationships?.fans||50)>=60,
+    choices:[
+      { text:'Give a heartfelt speech to the fans', fx:{ fans:12, morale:8, motivation:5 } },
+      { text:'Keep it brief and professional', fx:{ fans:5, morale:3 } },
+    ]},
+  { id:'pro_front_office', cat:'contract', title:'Front Office Meeting', desc:'The GM wants to discuss the team\'s direction with you.',
+    cond: g => g.phase==='pro' && g.pro.seasonsPlayed>=3 && (g.pro.role==='star'||g.pro.role==='superstar'),
+    choices:[
+      { text:'Push for them to add better supporting players', fx:{ frontOffice:-3, motivation:5, rosterUpgrade:true } },
+      { text:'Express confidence in the current roster', fx:{ frontOffice:8, teammates:5 } },
+      { text:'Ask about their long-term plans', fx:{ frontOffice:5, morale:3 } },
+    ]},
+  { id:'pro_injury_comeback', cat:'off-court', title:'Comeback Motivation', desc:'After recovering from injury, you feel a new fire to prove yourself.',
+    cond: g => g.phase==='pro' && !g.pro.currentInjury && (g.pro.injuries||[]).length>0 && g.season.week>5,
+    choices:[
+      { text:'Channel it into extra training', fx:{ motivation:10, attrBoost:['stamina','speed'], boostAmt:1, fatigue:5 } },
+      { text:'Take it slow and protect your body', fx:{ morale:5, fatigue:-8 } },
+    ]},
+  { id:'pro_playoff_push', cat:'media', title:'Playoff Push', desc:'Your team is on the bubble — every game matters now.',
+    cond: g => g.phase==='pro' && g.season.week>=30 && g.season.week<=38,
+    choices:[
+      { text:'Go all-in — extra film study and workouts', fx:{ motivation:10, fatigue:10, attrBoost:['perimeterDef','steal'], boostAmt:1 } },
+      { text:'Stay the course — no need to change what works', fx:{ morale:5, coach:3 } },
+    ]},
+];
+
 const MILESTONE_DEFS = [
   { id: 'games100', text: '100 Career Games', icon: '\u{1F3C0}', check: g => g.career.totalGames >= 100 },
   { id: 'games500', text: '500 Career Games', icon: '\u{1F3C0}', check: g => g.career.totalGames >= 500 },
@@ -828,7 +1016,10 @@ function defaultState() {
       roster: [],
       prevOvr: null,
       tradeRequested: false,
+      _hasEndorsement: false,
     },
+    _careerEvents: [],
+    _eventCooldown: 0,
     career: {
       stats: [], awards: [], milestones: [],
       totalGames: 0, totalPoints: 0, totalRebounds: 0, totalAssists: 0,
@@ -1066,6 +1257,10 @@ function enterGame() {
     }
   }
   if (G.player.motivation === undefined) G.player.motivation = 70;
+  if (!G._careerEvents) G._careerEvents = [];
+  if (G._eventCooldown === undefined) G._eventCooldown = 0;
+  if (G.pro._hasEndorsement === undefined) G.pro._hasEndorsement = false;
+  if (G.pro._pendingPlayerOption === undefined) G.pro._pendingPlayerOption = false;
   if (G.pro.relationships.teammate1 !== undefined) {
     G.pro.relationships = { coach: G.pro.relationships.coach||50, teammates: G.pro.relationships.teammate1||50, frontOffice: G.pro.relationships.frontOffice||50, fans: G.pro.relationships.fans||50 };
   }
@@ -1093,13 +1288,13 @@ function updateTopbar() {
 function navigate(page) {
   currentPage = page;
   document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.toggle('active',el.dataset.page===page));
-  const titles = { home:'Home / Office', player:'My Player', development:'Development', team:'Team', standings:'Standings', schedule:'Schedule', contracts:'Contracts', stats:'Stats', awards:'Awards & Honors', transactions:'Transactions', relationships:'Relationships', milestones:'Milestones', legacy:'Legacy Report', settings:'Settings', saveload:'Save / Load' };
+  const titles = { home:'Home / Office', player:'My Player', development:'Development', team:'Team', standings:'Standings', schedule:'Schedule', contracts:'Contracts', stats:'Stats', awards:'Awards & Honors', transactions:'Transactions', relationships:'Relationships', milestones:'Milestones', events:'Career Events', legacy:'Legacy Report', settings:'Settings', saveload:'Save / Load' };
   document.getElementById('page-title').textContent = titles[page]||page;
   renderPage(page);
 }
 function renderPage(page) {
   const c = document.getElementById('main-content');
-  const r = { home:renderHomePage, player:renderPlayerPage, development:renderDevelopmentPage, team:renderTeamPage, standings:renderStandingsPage, schedule:renderSchedulePage, contracts:renderContractsPage, stats:renderStatsPage, awards:renderAwardsPage, transactions:renderTransactionsPage, relationships:renderRelationshipsPage, milestones:renderMilestonesPage, legacy:renderLegacyPage, settings:renderSettingsPage, saveload:renderSaveLoadPage };
+  const r = { home:renderHomePage, player:renderPlayerPage, development:renderDevelopmentPage, team:renderTeamPage, standings:renderStandingsPage, schedule:renderSchedulePage, contracts:renderContractsPage, stats:renderStatsPage, awards:renderAwardsPage, transactions:renderTransactionsPage, relationships:renderRelationshipsPage, milestones:renderMilestonesPage, events:renderEventsPage, legacy:renderLegacyPage, settings:renderSettingsPage, saveload:renderSaveLoadPage };
   (r[page]||renderPlaceholder)(c, page);
 }
 function renderPlaceholder(c, page) {
@@ -1635,6 +1830,8 @@ function simWeek() {
     checkMilestones(results);
   }
 
+  const careerEvent = checkForCareerEvent(results);
+
   G.season.week++;
   computeRatings();
 
@@ -1643,6 +1840,10 @@ function simWeek() {
   saveGame(false);
   showWeekResults(results, gameResult);
   updateTopbar();
+
+  if (careerEvent) {
+    setTimeout(() => showCareerEventModal(careerEvent), 600);
+  }
 }
 
 function simToNextGame() {
@@ -1722,6 +1923,8 @@ function simWeekFullSilent() {
     G.season.nextGameIdx++;
   }
   if (phase === 'pro') checkMilestones([]);
+  const silentEvent = checkForCareerEvent(null);
+  if (silentEvent) resolveCareerEventSilent(silentEvent);
   G.season.week++;
   computeRatings();
 }
@@ -2733,7 +2936,22 @@ function endProSeason() {
 
   if (G.pro.contract) G.pro.contract.years--;
 
-  const contractExpired = G.pro.contract && G.pro.contract.years <= 0;
+  let contractExpired = G.pro.contract && G.pro.contract.years <= 0;
+  if (contractExpired && G.pro.contract) {
+    if (G.pro.contract.playerOption) {
+      G.pro._pendingPlayerOption = true;
+      contractExpired = false;
+      G.pro.contract.years = 1;
+    } else if (G.pro.contract.teamOption) {
+      const teamKeeps = G.player.overallRating >= 68 || (G.pro.relationships?.frontOffice||50) >= 60;
+      if (teamKeeps) {
+        contractExpired = false;
+        G.pro.contract.years = 1;
+        G.pro.contract.teamOption = false;
+      }
+    }
+  }
+
   const canRetire = G.player.age >= 30 || G.pro.seasonsPlayed >= 10;
   const forceRetire = G.player.overallRating < 40 || G.player.age >= 42;
 
@@ -2760,6 +2978,15 @@ function endProSeason() {
     </div>
     <div class="btn-group" style="justify-content:flex-end;">
       <button class="btn primary" onclick="retirePlayer()">Retire \u{1F44B}</button>
+    </div>`;
+  } else if (G.pro._pendingPlayerOption) {
+    html += `<div style="padding:12px;background:var(--blue-dim);border:1px solid var(--blue);border-radius:var(--radius-sm);margin-bottom:16px;font-size:13px;">
+      You have a <strong>player option</strong> for next season at $${G.pro.contract?.salary||0}M. You can opt in to stay, or opt out and test free agency.
+    </div>
+    <div class="btn-group" style="justify-content:flex-end;">
+      ${canRetire ? `<button class="btn danger" onclick="retirePlayer()">Retire \u{1F44B}</button>` : ''}
+      <button class="btn" onclick="exercisePlayerOption(false)">Opt Out — Free Agency ▶</button>
+      <button class="btn primary" onclick="exercisePlayerOption(true)">Opt In — Stay ▶</button>
     </div>`;
   } else if (contractExpired) {
     html += `<div style="padding:12px;background:var(--yellow-dim);border:1px solid var(--yellow);border-radius:var(--radius-sm);margin-bottom:16px;font-size:13px;">
@@ -2791,6 +3018,8 @@ function startNextProSeason() {
   G.pro.currentSeasonStats = {gp:0,pts:0,reb:0,ast:0,stl:0,blk:0,min:0,fgm:0,fga:0,tpm:0,tpa:0,ftm:0,fta:0};
   G.pro.gameLog = [];
   G.pro.tradeRequested = false;
+  G.pro._pendingPlayerOption = false;
+  G._eventCooldown = 0;
   G.season.schedule = generateProSchedule();
   G.pro.roster = G.pro.roster.map(t => ({...t, ovr: clamp(t.ovr + randInt(-3, 3), 50, 92)}));
   if (Math.random() < 0.3) {
@@ -2808,6 +3037,20 @@ function startNextProSeason() {
   saveGame(false);
   toast(`Season ${G.season.year} begins!`, 'success');
   updateTopbar(); navigate('home');
+}
+
+function exercisePlayerOption(optIn) {
+  G.pro._pendingPlayerOption = false;
+  if (optIn) {
+    if (G.pro.contract) G.pro.contract.playerOption = false;
+    toast('You opted in — returning for next season', 'success');
+    startNextProSeason();
+  } else {
+    if (G.pro.contract) G.pro.contract.years = 0;
+    closeModal();
+    toast('You opted out — entering free agency', 'info');
+    showFreeAgencyOffers();
+  }
 }
 
 // ─── TEAM PAGE ───
@@ -3367,6 +3610,247 @@ function updateRelationships(gameResult) {
   }
 }
 
+// ─── CAREER EVENTS SYSTEM ───
+
+function checkForCareerEvent(results) {
+  if (!G._careerEvents) G._careerEvents = [];
+  if (!G._eventCooldown) G._eventCooldown = 0;
+  if (G._eventCooldown > 0) { G._eventCooldown--; return null; }
+  if (Math.random() > 0.25) return null;
+
+  const firedIds = G._careerEvents.map(e => e.id + '_' + G.season.year);
+  const eligible = CAREER_EVENTS.filter(ev => {
+    if (firedIds.includes(ev.id + '_' + G.season.year)) return false;
+    try { return ev.cond(G); } catch(e) { return false; }
+  });
+  if (eligible.length === 0) return null;
+
+  const event = randFrom(eligible);
+  G._eventCooldown = randInt(2, 4);
+  return event;
+}
+
+function showCareerEventModal(event) {
+  const catIcons = { media:'\u{1F4F0}', teammate:'\u{1F91D}', endorsement:'\u{1F4B0}', coach:'\u{1F4CB}', community:'\u{2764}', 'off-court':'\u{1F303}', contract:'\u{1F4DD}', trade:'\u{1F504}', recruit:'\u{1F50D}' };
+  const catLabels = { media:'Media', teammate:'Teammates', endorsement:'Endorsement', coach:'Coaching Staff', community:'Community', 'off-court':'Off the Court', contract:'Contract', trade:'Trade', recruit:'Recruiting' };
+
+  let html = `<div class="modal-title">${catIcons[event.cat]||'\u{1F4E2}'} ${esc(event.title)}</div>
+    <div style="margin-bottom:4px;"><span class="badge badge-accent">${catLabels[event.cat]||event.cat}</span> <span style="font-size:12px;color:var(--text-muted);margin-left:8px;">Week ${G.season.week}</span></div>
+    <div style="font-size:14px;color:var(--text-secondary);margin-bottom:16px;">${esc(event.desc)}</div>`;
+
+  event.choices.forEach((ch, i) => {
+    let hint = '';
+    const fx = ch.fx || {};
+    const parts = [];
+    if (fx.coach > 0) parts.push('<span style="color:var(--green);">Coach ↑</span>');
+    if (fx.coach < 0) parts.push('<span style="color:var(--red);">Coach ↓</span>');
+    if (fx.teammates > 0) parts.push('<span style="color:var(--green);">Team ↑</span>');
+    if (fx.teammates < 0) parts.push('<span style="color:var(--red);">Team ↓</span>');
+    if (fx.fans > 0) parts.push('<span style="color:var(--green);">Fans ↑</span>');
+    if (fx.fans < 0) parts.push('<span style="color:var(--red);">Fans ↓</span>');
+    if (fx.frontOffice > 0) parts.push('<span style="color:var(--green);">FO ↑</span>');
+    if (fx.frontOffice < 0) parts.push('<span style="color:var(--red);">FO ↓</span>');
+    if (fx.motivation > 0) parts.push('<span style="color:var(--green);">Motivation ↑</span>');
+    if (fx.motivation < 0) parts.push('<span style="color:var(--red);">Motivation ↓</span>');
+    if (fx.morale > 0) parts.push('<span style="color:var(--green);">Morale ↑</span>');
+    if (fx.morale < 0) parts.push('<span style="color:var(--red);">Morale ↓</span>');
+    if (fx.attrBoost) parts.push('<span style="color:var(--blue);">Skill boost</span>');
+    if (fx.draftStock > 0) parts.push('<span style="color:var(--green);">Draft stock ↑</span>');
+    if (fx.extension) parts.push('<span style="color:var(--green);">Contract ext.</span>');
+    if (fx.noTrade) parts.push('<span style="color:var(--blue);">No-trade clause</span>');
+    if (parts.length > 0) hint = `<div class="event-outcome">${parts.join(' &middot; ')}</div>`;
+
+    html += `<div class="event-choice" onclick="resolveCareerEvent('${event.id}',${i})">
+      <div style="font-size:14px;font-weight:600;">${esc(ch.text)}</div>${hint}</div>`;
+  });
+
+  showModal(html);
+}
+
+function resolveCareerEvent(eventId, choiceIdx) {
+  const event = CAREER_EVENTS.find(e => e.id === eventId);
+  if (!event) { closeModal(); return; }
+  const choice = event.choices[choiceIdx];
+  const fx = choice.fx || {};
+  const results = [];
+
+  if (G.phase === 'pro' && G.pro.relationships) {
+    if (fx.coach) { G.pro.relationships.coach = clamp((G.pro.relationships.coach||50) + fx.coach, 0, 100); results.push(`Coach relationship ${fx.coach>0?'+':''}${fx.coach}`); }
+    if (fx.teammates) { G.pro.relationships.teammates = clamp((G.pro.relationships.teammates||50) + fx.teammates, 0, 100); results.push(`Teammate relationship ${fx.teammates>0?'+':''}${fx.teammates}`); }
+    if (fx.fans) { G.pro.relationships.fans = clamp((G.pro.relationships.fans||50) + fx.fans, 0, 100); results.push(`Fan relationship ${fx.fans>0?'+':''}${fx.fans}`); }
+    if (fx.frontOffice) { G.pro.relationships.frontOffice = clamp((G.pro.relationships.frontOffice||50) + fx.frontOffice, 0, 100); results.push(`Front office ${fx.frontOffice>0?'+':''}${fx.frontOffice}`); }
+  }
+
+  if (fx.motivation) { G.player.motivation = clamp((G.player.motivation||70) + fx.motivation, 0, 100); results.push(`Motivation ${fx.motivation>0?'+':''}${fx.motivation}`); }
+  if (fx.morale) { G.player.morale = clamp((G.player.morale||80) + fx.morale, 20, 100); results.push(`Morale ${fx.morale>0?'+':''}${fx.morale}`); }
+  if (fx.fatigue) { G.player.fatigue = clamp((G.player.fatigue||0) + fx.fatigue, 0, 100); }
+
+  if (fx.attrBoost && fx.boostAmt) {
+    fx.attrBoost.forEach(k => {
+      const cap = G.player.potentialCaps[k] || 99;
+      G.player.attributes[k] = Math.min(cap, (G.player.attributes[k]||25) + fx.boostAmt);
+    });
+    results.push(`+${fx.boostAmt} to ${fx.attrBoost.map(k => ATTRIBUTES.find(a=>a.key===k)?.name||k).join(', ')}`);
+  }
+
+  if (fx.draftStock && G.phase === 'college') {
+    G.college.draftStock = clamp((G.college.draftStock||0) + fx.draftStock, 0, 100);
+    results.push(`Draft stock +${fx.draftStock}`);
+  }
+
+  if (fx.recruitBoost && G.phase === 'highschool') {
+    G.highSchool.recruitingInterest.blueBlood = clamp((G.highSchool.recruitingInterest.blueBlood||0) + fx.recruitBoost, 0, 100);
+    G.highSchool.recruitingInterest.midMajor = clamp((G.highSchool.recruitingInterest.midMajor||0) + fx.recruitBoost, 0, 100);
+  }
+
+  if (fx.endorsement && G.phase === 'pro') {
+    G.pro._hasEndorsement = true;
+    results.push('Endorsement deal signed!');
+  }
+
+  if (fx.noTrade && G.pro.contract) {
+    G.pro.contract.noTrade = true;
+    results.push('No-trade clause added to contract');
+  }
+
+  if (fx.extension && G.pro.contract) {
+    const ovr = G.player.overallRating;
+    const extYears = ovr >= 80 ? randInt(3,5) : randInt(2,3);
+    const extSalary = ovr >= 85 ? randInt(25,40) : ovr >= 78 ? randInt(15,28) : ovr >= 70 ? randInt(8,18) : randInt(3,10);
+    G.pro.contract.years += extYears;
+    G.pro.contract.salary = extSalary;
+    G.pro.contract.type = 'Extension';
+    const team = PRO_TEAMS.find(t => t.id === G.pro.team);
+    G.pro.transactions.push({ type: 'Extension', team: team?.name||'', from: '', season: G.pro.seasonsPlayed, salary: extSalary, years: extYears });
+    results.push(`Signed ${extYears}-year extension worth $${extSalary}M/yr`);
+  }
+
+  if (fx.counterExtension && G.pro.contract) {
+    const ovr = G.player.overallRating;
+    const bonus = ovr >= 80 ? 5 : 3;
+    const extYears = ovr >= 80 ? randInt(3,5) : randInt(2,4);
+    const baseSalary = ovr >= 85 ? randInt(28,45) : ovr >= 78 ? randInt(18,32) : ovr >= 70 ? randInt(10,22) : randInt(5,12);
+    if (Math.random() < 0.6) {
+      G.pro.contract.years += extYears;
+      G.pro.contract.salary = baseSalary;
+      G.pro.contract.type = 'Max Extension';
+      const team = PRO_TEAMS.find(t => t.id === G.pro.team);
+      G.pro.transactions.push({ type: 'Extension', team: team?.name||'', from: '', season: G.pro.seasonsPlayed, salary: baseSalary, years: extYears });
+      results.push(`Counter accepted! ${extYears}-year, $${baseSalary}M/yr max extension`);
+    } else {
+      results.push('Counter rejected — you\'ll hit free agency');
+    }
+  }
+
+  if (fx.tradeRequest) {
+    G.pro.tradeRequested = true;
+    results.push('You\'ve quietly let the FO know you\'re open to a trade');
+  }
+
+  if (fx.multiTrade) {
+    executeMultiTeamTrade(fx.multiTrade);
+    results.push('Multi-team trade completed!');
+  }
+
+  if (fx.rosterUpgrade && G.pro.roster && G.pro.roster.length > 0) {
+    const weakest = G.pro.roster.reduce((min, p, i) => p.ovr < min.ovr ? { ovr: p.ovr, idx: i } : min, { ovr: 99, idx: 0 });
+    G.pro.roster[weakest.idx].ovr = clamp(G.pro.roster[weakest.idx].ovr + randInt(5, 12), 55, 90);
+    G.pro.roster[weakest.idx].firstName = randFrom(FIRST_NAMES);
+    G.pro.roster[weakest.idx].lastName = randFrom(LAST_NAMES);
+    results.push('FO acquired a better player via trade');
+  }
+
+  if (!G._careerEvents) G._careerEvents = [];
+  G._careerEvents.push({ id: event.id, title: event.title, cat: event.cat, choice: choice.text, week: G.season.week, year: G.season.year, phase: G.phase });
+
+  computeRatings();
+  saveGame(false);
+  closeModal();
+
+  const catIcons = { media:'\u{1F4F0}', teammate:'\u{1F91D}', endorsement:'\u{1F4B0}', coach:'\u{1F4CB}', community:'\u{2764}', 'off-court':'\u{1F303}', contract:'\u{1F4DD}', trade:'\u{1F504}', recruit:'\u{1F50D}' };
+  toast(`${catIcons[event.cat]||''} ${event.title}: ${results[0]||'Done'}`, 'success');
+}
+
+function resolveCareerEventSilent(event) {
+  if (!event || !event.choices || event.choices.length === 0) return null;
+  const choice = randFrom(event.choices);
+  const fx = choice.fx || {};
+  const results = [];
+
+  if (G.phase === 'pro' && G.pro.relationships) {
+    if (fx.coach) G.pro.relationships.coach = clamp((G.pro.relationships.coach||50) + fx.coach, 0, 100);
+    if (fx.teammates) G.pro.relationships.teammates = clamp((G.pro.relationships.teammates||50) + fx.teammates, 0, 100);
+    if (fx.fans) G.pro.relationships.fans = clamp((G.pro.relationships.fans||50) + fx.fans, 0, 100);
+    if (fx.frontOffice) G.pro.relationships.frontOffice = clamp((G.pro.relationships.frontOffice||50) + fx.frontOffice, 0, 100);
+  }
+  if (fx.motivation) G.player.motivation = clamp((G.player.motivation||70) + fx.motivation, 0, 100);
+  if (fx.morale) G.player.morale = clamp((G.player.morale||80) + fx.morale, 20, 100);
+  if (fx.fatigue) G.player.fatigue = clamp((G.player.fatigue||0) + fx.fatigue, 0, 100);
+  if (fx.attrBoost && fx.boostAmt) {
+    fx.attrBoost.forEach(k => { G.player.attributes[k] = Math.min(G.player.potentialCaps[k]||99, (G.player.attributes[k]||25) + fx.boostAmt); });
+  }
+  if (fx.draftStock && G.phase === 'college') G.college.draftStock = clamp((G.college.draftStock||0) + fx.draftStock, 0, 100);
+  if (fx.recruitBoost && G.phase === 'highschool') {
+    G.highSchool.recruitingInterest.blueBlood = clamp((G.highSchool.recruitingInterest.blueBlood||0) + fx.recruitBoost, 0, 100);
+    G.highSchool.recruitingInterest.midMajor = clamp((G.highSchool.recruitingInterest.midMajor||0) + fx.recruitBoost, 0, 100);
+  }
+  if (fx.endorsement && G.phase === 'pro') G.pro._hasEndorsement = true;
+  if (fx.noTrade && G.pro.contract) G.pro.contract.noTrade = true;
+  if (fx.extension && G.pro.contract) {
+    const ovr = G.player.overallRating;
+    const ey = ovr >= 80 ? randInt(3,5) : randInt(2,3);
+    const es = ovr >= 85 ? randInt(25,40) : ovr >= 78 ? randInt(15,28) : ovr >= 70 ? randInt(8,18) : randInt(3,10);
+    G.pro.contract.years += ey; G.pro.contract.salary = es; G.pro.contract.type = 'Extension';
+    G.pro.transactions.push({ type:'Extension', team:PRO_TEAMS.find(t=>t.id===G.pro.team)?.name||'', from:'', season:G.pro.seasonsPlayed, salary:es, years:ey });
+  }
+  if (fx.counterExtension && G.pro.contract && Math.random() < 0.6) {
+    const ovr = G.player.overallRating;
+    const ey = ovr >= 80 ? randInt(3,5) : randInt(2,4);
+    const es = ovr >= 85 ? randInt(28,45) : ovr >= 78 ? randInt(18,32) : ovr >= 70 ? randInt(10,22) : randInt(5,12);
+    G.pro.contract.years += ey; G.pro.contract.salary = es; G.pro.contract.type = 'Max Extension';
+    G.pro.transactions.push({ type:'Extension', team:PRO_TEAMS.find(t=>t.id===G.pro.team)?.name||'', from:'', season:G.pro.seasonsPlayed, salary:es, years:ey });
+  }
+  if (fx.tradeRequest) G.pro.tradeRequested = true;
+  if (fx.multiTrade) executeMultiTeamTrade(fx.multiTrade);
+  if (fx.rosterUpgrade && G.pro.roster && G.pro.roster.length > 0) {
+    const w = G.pro.roster.reduce((m,p,i) => p.ovr < m.ovr ? {ovr:p.ovr,idx:i} : m, {ovr:99,idx:0});
+    G.pro.roster[w.idx].ovr = clamp(G.pro.roster[w.idx].ovr + randInt(5,12), 55, 90);
+    G.pro.roster[w.idx].firstName = randFrom(FIRST_NAMES); G.pro.roster[w.idx].lastName = randFrom(LAST_NAMES);
+  }
+  if (!G._careerEvents) G._careerEvents = [];
+  G._careerEvents.push({ id:event.id, title:event.title, cat:event.cat, choice:choice.text, week:G.season.week, year:G.season.year, phase:G.phase });
+  return `${event.title}: "${choice.text}"`;
+}
+
+function executeMultiTeamTrade(preference) {
+  const oldTeam = PRO_TEAMS.find(t => t.id === G.pro.team);
+  let candidates = PRO_TEAMS.filter(t => t.id !== G.pro.team);
+
+  if (preference === 'contender') {
+    candidates.sort((a,b) => b.prestige - a.prestige);
+  } else {
+    candidates.sort((a,b) => {
+      const aNeed = a.need.includes(G.player.position) ? 1 : 0;
+      const bNeed = b.need.includes(G.player.position) ? 1 : 0;
+      return bNeed - aNeed || b.prestige - a.prestige;
+    });
+  }
+  const newTeam = candidates[0];
+
+  G.pro.tradeHistory.push({ from: oldTeam?.name||'', to: newTeam.name, season: G.pro.seasonsPlayed, age: G.player.age, type: 'multi-team' });
+  G.pro.transactions.push({ type: 'Traded (3-team)', team: newTeam.name, from: oldTeam?.name||'', season: G.pro.seasonsPlayed });
+  G.career.milestones.push({ text: `Traded to ${newTeam.name} in a multi-team deal`, age: G.player.age, icon: '\u{1F504}' });
+
+  G.pro.team = newTeam.id;
+  const range = newTeam.prestige >= 70 ? [72,87] : newTeam.prestige >= 50 ? [64,80] : [57,74];
+  G.pro.roster = [];
+  ['PG','SG','SF','PF','C','PG','SG','SF','PF','C','SF','PG','SG','PF'].forEach(pos => {
+    G.pro.roster.push({ firstName: randFrom(FIRST_NAMES), lastName: randFrom(LAST_NAMES), position: pos, ovr: randInt(range[0], range[1]) });
+  });
+  G.pro.relationships = { coach: 50, teammates: 45, frontOffice: 55, fans: 40 };
+  G.pro.tradeRequested = false;
+}
+
 function checkMilestones(results) {
   if (!G.career.milestoneFlags) G.career.milestoneFlags = {};
   MILESTONE_DEFS.forEach(m => {
@@ -3380,75 +3864,122 @@ function checkMilestones(results) {
 
 function showFreeAgencyOffers() {
   const ovr = G.player.overallRating;
-  const role = G.pro.role;
   const oldTeam = PRO_TEAMS.find(t => t.id === G.pro.team);
+  const allStars = G.career.awards.filter(a => a.name === 'All-Star').length;
 
   const offers = [];
-  const interestedTeams = [...PRO_TEAMS].sort(() => Math.random() - 0.5).slice(0, 8);
+  const teamCount = ovr >= 80 ? 10 : ovr >= 70 ? 8 : 6;
+  const interestedTeams = [...PRO_TEAMS].sort(() => Math.random() - 0.5).slice(0, teamCount);
   if (oldTeam && !interestedTeams.find(t=>t.id===oldTeam.id)) interestedTeams[0] = oldTeam;
 
   interestedTeams.forEach(team => {
     const needBonus = team.need.includes(G.player.position) ? 1.3 : 1.0;
-    const prestigeMod = team.prestige / 100;
-    let salary, years, offeredRole;
+    let salary, years, offeredRole, hasPlayerOption = false, hasTeamOption = false, hasNoTrade = false;
     if (ovr >= 85) {
-      salary = Math.round(randInt(25, 40) * needBonus);
+      salary = Math.round(randInt(28, 45) * needBonus);
       years = randInt(3, 5);
       offeredRole = 'superstar';
+      hasPlayerOption = Math.random() < 0.6;
+      hasNoTrade = Math.random() < 0.5;
     } else if (ovr >= 78) {
-      salary = Math.round(randInt(15, 28) * needBonus);
+      salary = Math.round(randInt(15, 30) * needBonus);
       years = randInt(3, 4);
       offeredRole = 'star';
+      hasPlayerOption = Math.random() < 0.3;
     } else if (ovr >= 70) {
       salary = Math.round(randInt(8, 18) * needBonus);
       years = randInt(2, 4);
       offeredRole = 'starter';
+      hasTeamOption = Math.random() < 0.3;
     } else if (ovr >= 62) {
       salary = Math.round(randInt(3, 10) * needBonus);
       years = randInt(1, 3);
       offeredRole = 'rotation';
+      hasTeamOption = Math.random() < 0.4;
     } else {
       salary = randInt(1, 4);
       years = randInt(1, 2);
       offeredRole = 'bench';
     }
+    if (team.id === oldTeam?.id && ovr >= 70) {
+      salary = Math.round(salary * 1.1);
+      if (!hasNoTrade && allStars >= 3) hasNoTrade = true;
+    }
     if (Math.random() < 0.5 || offers.length < 3) {
-      offers.push({ team, salary, years, role: offeredRole, needsPos: team.need.includes(G.player.position), isOldTeam: team.id === oldTeam?.id });
+      offers.push({ team, salary, years, role: offeredRole, needsPos: team.need.includes(G.player.position), isOldTeam: team.id === oldTeam?.id, playerOption: hasPlayerOption, teamOption: hasTeamOption, noTrade: hasNoTrade });
     }
   });
 
   offers.sort((a,b) => b.salary - a.salary);
-  if (offers.length > 5) offers.length = 5;
+  if (offers.length > 6) offers.length = 6;
   if (offers.length < 2) {
     const fallback = PRO_TEAMS.filter(t => !offers.find(o=>o.team.id===t.id)).sort((a,b) => a.prestige - b.prestige)[0];
-    offers.push({ team: fallback, salary: 1, years: 1, role: 'bench', needsPos: false, isOldTeam: false });
+    offers.push({ team: fallback, salary: 1, years: 1, role: 'bench', needsPos: false, isOldTeam: false, playerOption:false, teamOption:false, noTrade:false });
   }
 
   window._faOffers = offers;
   window._faSelected = null;
 
+  renderFAOffersModal(offers);
+}
+
+function renderFAOffersModal(offers) {
   let html = `<div class="modal-title">\u{1F4B0} Free Agency</div>
-    <div class="modal-body">Your contract has expired. These teams want to sign you:</div>`;
+    <div class="modal-body">Your contract has expired. ${offers.length} teams want to sign you:</div>`;
 
   offers.forEach((o, i) => {
     const roleLabel = {bench:'Bench',rotation:'Rotation',starter:'Starter',star:'Star',superstar:'Superstar'}[o.role];
+    const extras = [];
+    if (o.playerOption) extras.push('<span class="badge badge-green" style="font-size:10px;">Player Option</span>');
+    if (o.teamOption) extras.push('<span class="badge badge-yellow" style="font-size:10px;">Team Option</span>');
+    if (o.noTrade) extras.push('<span class="badge badge-blue" style="font-size:10px;">No-Trade</span>');
     html += `<div class="fa-offer" onclick="selectFAOffer(${i})" id="fao-${i}">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div>
           <div style="font-weight:700;font-size:16px;">${o.team.name} ${o.isOldTeam?'<span class="badge badge-accent">Current</span>':''}</div>
-          <div style="font-size:12px;color:var(--text-secondary);">${o.team.city} &middot; ${o.team.conf}</div>
+          <div style="font-size:12px;color:var(--text-secondary);">${o.team.city} &middot; ${o.team.conf} &middot; Prestige: ${o.team.prestige}</div>
         </div>
         <div style="text-align:right;">
           <div style="font-weight:700;color:var(--green);">$${o.salary}M / ${o.years}yr</div>
           <div style="font-size:12px;color:var(--text-secondary);">${roleLabel}</div>
-          ${o.needsPos?'<span class="badge badge-green" style="font-size:10px;">Needs '+G.player.position+'</span>':''}
+          <div style="margin-top:2px;">${o.needsPos?'<span class="badge badge-green" style="font-size:10px;">Needs '+G.player.position+'</span>':''} ${extras.join(' ')}</div>
         </div>
       </div>
     </div>`;
   });
 
-  html += `<div class="btn-group" style="justify-content:flex-end;"><button class="btn primary" onclick="confirmFAOffer()">Sign ▶</button></div>`;
-  showModal(html);
+  html += `<div class="btn-group" style="justify-content:space-between;">
+    <button class="btn" onclick="counterFAOffer()">Counter Offer</button>
+    <button class="btn primary" onclick="confirmFAOffer()">Sign ▶</button>
+  </div>`;
+  showModal(html, true);
+}
+
+function counterFAOffer() {
+  if (window._faSelected === null) { toast('Select an offer first', 'error'); return; }
+  const offer = window._faOffers[window._faSelected];
+  const ovr = G.player.overallRating;
+  if (ovr < 65) { toast('Your leverage is too low to counter', 'error'); return; }
+
+  const bumpPct = ovr >= 85 ? 0.25 : ovr >= 78 ? 0.18 : 0.12;
+  const counterSalary = Math.round(offer.salary * (1 + bumpPct));
+  const counterYears = Math.min(offer.years + 1, 5);
+
+  const acceptChance = ovr >= 85 ? 0.7 : ovr >= 78 ? 0.5 : ovr >= 70 ? 0.35 : 0.2;
+  const accepted = Math.random() < acceptChance;
+
+  if (accepted) {
+    offer.salary = counterSalary;
+    offer.years = counterYears;
+    if (ovr >= 80 && !offer.playerOption) offer.playerOption = true;
+    toast(`Counter accepted! $${counterSalary}M / ${counterYears}yr`, 'success');
+  } else {
+    offer.salary = Math.max(1, Math.round(offer.salary * 0.9));
+    toast('Counter rejected — original offer reduced', 'info');
+  }
+
+  renderFAOffersModal(window._faOffers);
+  selectFAOffer(window._faSelected);
 }
 
 function selectFAOffer(idx) {
@@ -3465,8 +3996,19 @@ function confirmFAOffer() {
   const oldTeamId = G.pro.team;
   const oldTeam = PRO_TEAMS.find(t=>t.id===oldTeamId);
   G.pro.team = offer.team.id;
-  G.pro.contract = { salary: offer.salary, years: offer.years, type: 'Free Agent' };
+  G.pro.contract = {
+    salary: offer.salary, years: offer.years, type: 'Free Agent',
+    playerOption: offer.playerOption || false,
+    teamOption: offer.teamOption || false,
+    noTrade: offer.noTrade || false,
+  };
   G.pro.role = offer.role;
+
+  const extras = [];
+  if (offer.playerOption) extras.push('Player Option');
+  if (offer.teamOption) extras.push('Team Option');
+  if (offer.noTrade) extras.push('No-Trade Clause');
+  const extrasStr = extras.length > 0 ? ' + ' + extras.join(', ') : '';
 
   if (offer.team.id !== oldTeamId) {
     const range = offer.team.prestige >= 70 ? [70,85] : offer.team.prestige >= 50 ? [62,78] : [55,72];
@@ -3475,19 +4017,27 @@ function confirmFAOffer() {
     positions.forEach(pos => { G.pro.roster.push({ firstName: randFrom(FIRST_NAMES), lastName: randFrom(LAST_NAMES), position: pos, ovr: randInt(range[0], range[1]) }); });
     G.pro.relationships = { coach: 50, teammates: 45, frontOffice: 55, fans: 40 };
     G.pro.transactions.push({ type: 'Signed', team: offer.team.name, from: oldTeam?.name||'', season: G.pro.seasonsPlayed, salary: offer.salary, years: offer.years });
-    G.career.milestones.push({ text: `Signed with ${offer.team.name} ($${offer.salary}M/${offer.years}yr)`, age: G.player.age, icon: '\u{1F4DD}' });
+    G.career.milestones.push({ text: `Signed with ${offer.team.name} ($${offer.salary}M/${offer.years}yr${extrasStr})`, age: G.player.age, icon: '\u{1F4DD}' });
   } else {
     G.pro.transactions.push({ type: 'Re-signed', team: offer.team.name, from: '', season: G.pro.seasonsPlayed, salary: offer.salary, years: offer.years });
     G.pro.relationships.frontOffice = clamp((G.pro.relationships.frontOffice||50) + 10, 0, 100);
   }
 
   saveGame(false);
-  toast(`Signed with ${offer.team.name}! $${offer.salary}M / ${offer.years} years`, 'success');
+  toast(`Signed with ${offer.team.name}! $${offer.salary}M / ${offer.years} years${extrasStr}`, 'success');
   startNextProSeason();
 }
 
 function requestTrade() {
   if (G.pro.tradeRequested) { toast('Trade already requested', 'info'); return; }
+  if (G.pro.contract && G.pro.contract.noTrade) {
+    toast('You have a no-trade clause — you control your destination', 'info');
+    showTradeDestinationPicker();
+    return;
+  }
+  const isDeadlineWindow = G.season.week >= 18 && G.season.week <= 24;
+  if (G.season.week > 24) { toast('Trade deadline has passed (Week 24)', 'error'); return; }
+
   G.pro.tradeRequested = true;
   G.pro.relationships.coach = clamp((G.pro.relationships.coach||50) - 10, 0, 100);
   G.pro.relationships.teammates = clamp((G.pro.relationships.teammates||50) - 5, 0, 100);
@@ -3496,18 +4046,116 @@ function requestTrade() {
   saveGame(false);
   toast('Trade requested! Your relationships will suffer.', 'info');
 
-  const tradeChance = G.player.overallRating >= 80 ? 0.7 : G.player.overallRating >= 70 ? 0.5 : 0.3;
+  let tradeChance = G.player.overallRating >= 80 ? 0.7 : G.player.overallRating >= 70 ? 0.5 : 0.3;
+  if (isDeadlineWindow) tradeChance += 0.15;
+  if ((G.pro.relationships.frontOffice||50) < 30) tradeChance += 0.1;
+
   if (Math.random() < tradeChance) {
-    setTimeout(() => executeTrade(), 500);
+    setTimeout(() => showTradeOffers(), 500);
   } else {
     toast('Front office denied your trade request... for now.', 'info');
   }
 }
 
-function executeTrade() {
-  const oldTeam = PRO_TEAMS.find(t=>t.id===G.pro.team);
+function showTradeDestinationPicker() {
+  const oldTeam = PRO_TEAMS.find(t => t.id === G.pro.team);
+  const candidates = PRO_TEAMS.filter(t => t.id !== G.pro.team)
+    .sort((a,b) => b.prestige - a.prestige).slice(0, 8);
+
+  let html = `<div class="modal-title">\u{1F504} Choose Your Destination</div>
+    <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Your no-trade clause gives you control. Where do you want to go?</div>`;
+
+  candidates.forEach((t, i) => {
+    const needsPos = t.need.includes(G.player.position);
+    html += `<div class="fa-offer" onclick="selectTradeDestination(${i})" id="td-${i}">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><div style="font-weight:700;">${t.name}</div><div style="font-size:12px;color:var(--text-secondary);">${t.city} &middot; ${t.conf}</div></div>
+        <div style="text-align:right;"><div style="font-size:13px;">Prestige: ${t.prestige}</div>${needsPos?'<span class="badge badge-green" style="font-size:10px;">Needs '+G.player.position+'</span>':''}</div>
+      </div></div>`;
+  });
+
+  window._tradeDests = candidates;
+  window._tradeDestSelected = null;
+  html += `<div class="btn-group" style="justify-content:flex-end;"><button class="btn primary" onclick="confirmTradeDestination()">Request Trade ▶</button></div>`;
+  showModal(html);
+}
+
+function selectTradeDestination(idx) {
+  window._tradeDestSelected = idx;
+  document.querySelectorAll('.fa-offer').forEach(el => el.classList.remove('selected'));
+  document.getElementById('td-'+idx)?.classList.add('selected');
+}
+
+function confirmTradeDestination() {
+  if (window._tradeDestSelected === null) { toast('Select a team', 'error'); return; }
+  const team = window._tradeDests[window._tradeDestSelected];
+  closeModal();
+  G.pro.tradeRequested = true;
+  G.pro.relationships.frontOffice = clamp((G.pro.relationships.frontOffice||50) - 10, 0, 100);
+  executeTrade(team);
+}
+
+function showTradeOffers() {
+  const oldTeam = PRO_TEAMS.find(t => t.id === G.pro.team);
   const candidates = PRO_TEAMS.filter(t => t.id !== G.pro.team);
-  const newTeam = candidates.sort(() => Math.random() - 0.5).find(t => t.need.includes(G.player.position) || Math.random() < 0.3) || randFrom(candidates);
+  const offers = [];
+
+  for (let i = 0; i < 3; i++) {
+    const team = candidates.sort(() => Math.random() - 0.5).find(t => t.need.includes(G.player.position) || Math.random() < 0.4) || randFrom(candidates);
+    if (offers.find(o => o.team.id === team.id)) continue;
+    const pickRound = G.player.overallRating >= 80 ? '1st' : G.player.overallRating >= 70 ? '1st' : '2nd';
+    const pickYear = G.season.year + randInt(1, 3);
+    const playerReturn = { firstName: randFrom(FIRST_NAMES), lastName: randFrom(LAST_NAMES), position: randFrom(['PG','SG','SF','PF','C']), ovr: randInt(55, 72) };
+    offers.push({ team, pick: `${pickYear} ${pickRound} Round Pick`, playerReturn, needsPos: team.need.includes(G.player.position) });
+  }
+
+  if (offers.length === 0) {
+    toast('No teams made a trade offer', 'info');
+    return;
+  }
+
+  window._tradeOffers = offers;
+  window._tradeSelected = null;
+
+  let html = `<div class="modal-title">\u{1F504} Trade Offers</div>
+    <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">${oldTeam?.name||'Your team'} has received ${offers.length} trade offer${offers.length>1?'s':''}:</div>`;
+
+  offers.forEach((o, i) => {
+    html += `<div class="fa-offer" onclick="selectTradeOffer(${i})" id="to-${i}">
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px;">${o.team.name}</div>
+      <div class="trade-package">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">You receive:</div>
+        <div style="font-size:13px;">• ${o.playerReturn.firstName} ${o.playerReturn.lastName} (${o.playerReturn.position}, ${o.playerReturn.ovr} OVR)</div>
+        <div style="font-size:13px;">• ${o.pick}</div>
+      </div>
+      <div style="font-size:12px;color:var(--text-secondary);">${o.team.city} &middot; ${o.team.conf} &middot; Prestige: ${o.team.prestige}
+        ${o.needsPos?' &middot; <span style="color:var(--green);">Needs '+G.player.position+'</span>':''}</div>
+    </div>`;
+  });
+
+  html += `<div class="btn-group" style="justify-content:space-between;">
+    <button class="btn" onclick="closeModal();G.pro.tradeRequested=false;toast('Trade request withdrawn','info');">Reject All</button>
+    <button class="btn primary" onclick="confirmTradeOffer()">Accept Trade ▶</button>
+  </div>`;
+  showModal(html, true);
+}
+
+function selectTradeOffer(idx) {
+  window._tradeSelected = idx;
+  document.querySelectorAll('.fa-offer').forEach(el => el.classList.remove('selected'));
+  document.getElementById('to-'+idx)?.classList.add('selected');
+}
+
+function confirmTradeOffer() {
+  if (window._tradeSelected === null) { toast('Select a trade offer', 'error'); return; }
+  const offer = window._tradeOffers[window._tradeSelected];
+  closeModal();
+  executeTrade(offer.team);
+}
+
+function executeTrade(targetTeam) {
+  const oldTeam = PRO_TEAMS.find(t=>t.id===G.pro.team);
+  const newTeam = targetTeam || PRO_TEAMS.filter(t => t.id !== G.pro.team).sort(() => Math.random() - 0.5).find(t => t.need.includes(G.player.position) || Math.random() < 0.3) || randFrom(PRO_TEAMS.filter(t => t.id !== G.pro.team));
 
   G.pro.tradeHistory.push({ from: oldTeam?.name||'', to: newTeam.name, season: G.pro.seasonsPlayed, age: G.player.age });
   G.pro.transactions.push({ type: 'Traded', team: newTeam.name, from: oldTeam?.name||'', season: G.pro.seasonsPlayed });
@@ -3520,6 +4168,7 @@ function executeTrade() {
   positions.forEach(pos => { G.pro.roster.push({ firstName: randFrom(FIRST_NAMES), lastName: randFrom(LAST_NAMES), position: pos, ovr: randInt(range[0], range[1]) }); });
   G.pro.relationships = { coach: 45, teammates: 40, frontOffice: 50, fans: 35 };
   G.pro.tradeRequested = false;
+  if (G.pro.contract) G.pro.contract.noTrade = false;
 
   saveGame(false);
   toast(`Traded to the ${newTeam.name}!`, 'success');
@@ -3587,7 +4236,16 @@ function renderContractsPage(c) {
   }
   const team = PRO_TEAMS.find(t=>t.id===G.pro.team);
   const contract = G.pro.contract;
-  const canTrade = G.phase === 'pro' && !G.pro.tradeRequested && G.pro.seasonsPlayed > 1;
+  const canTrade = G.phase === 'pro' && !G.pro.tradeRequested && G.pro.seasonsPlayed > 1 && G.season.week <= 24;
+  const isDeadlineWindow = G.season.week >= 18 && G.season.week <= 24;
+  const deadlinePassed = G.season.week > 24;
+
+  const contractExtras = [];
+  if (contract) {
+    if (contract.playerOption) contractExtras.push('<span class="badge badge-green">Player Option</span>');
+    if (contract.teamOption) contractExtras.push('<span class="badge badge-yellow">Team Option</span>');
+    if (contract.noTrade) contractExtras.push('<span class="badge badge-blue">No-Trade Clause</span>');
+  }
 
   c.innerHTML = `
     ${contract ? `<div class="card"><div class="card-title">Current Contract</div>
@@ -3596,14 +4254,25 @@ function renderContractsPage(c) {
       ${meterRow('Salary', '$' + contract.salary + 'M / year')}
       ${meterRow('Years Remaining', contract.years + (contract.years <= 1 ? ' (expiring)' : ''))}
       ${meterRow('Total Value', '$' + (contract.salary * contract.years) + 'M')}
+      ${contractExtras.length > 0 ? `<div style="margin-top:8px;">${contractExtras.join(' ')}</div>` : ''}
+      ${contract.playerOption && contract.years === 1 ? '<div style="margin-top:8px;font-size:12px;color:var(--green);">You can opt out and test free agency at end of season.</div>' : ''}
+      ${contract.teamOption && contract.years === 1 ? '<div style="margin-top:8px;font-size:12px;color:var(--yellow);">Team holds an option on your final year.</div>' : ''}
     </div>` : '<div class="card"><div class="card-title">No Contract</div><div style="font-size:13px;color:var(--text-muted);">You are currently a free agent.</div></div>'}
     <div class="card"><div class="card-title">Career Earnings</div>
       <div style="font-size:13px;color:var(--text-secondary);">
         ${G.pro.transactions.filter(t=>t.salary).map(t => `<div style="padding:4px 0;">${t.team}: $${t.salary}M x ${t.years}yr = $${t.salary*t.years}M</div>`).join('') || 'No contract history yet.'}
       </div>
     </div>
+    ${G.phase==='pro' ? `<div class="card"><div class="card-title">Trade Deadline</div>
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">
+        ${deadlinePassed ? '<span style="color:var(--red);">Trade deadline has passed (Week 24)</span>' :
+          isDeadlineWindow ? '<span style="color:var(--yellow);">Trade deadline approaching! (Week 24)</span>' :
+          `Trade deadline: Week 24 (current: Week ${G.season.week})`}
+      </div>
+      ${contract?.noTrade ? '<div style="font-size:12px;color:var(--blue);margin-bottom:8px;">Your no-trade clause means you control your destination.</div>' : ''}
+    </div>` : ''}
     ${canTrade ? `<div class="card"><div class="card-title">Trade Request</div>
-      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Requesting a trade will damage your relationships with the current team.</div>
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Requesting a trade will damage your relationships with the current team.${isDeadlineWindow?' <span style="color:var(--yellow);">Deadline window — increased trade activity!</span>':''}</div>
       <button class="btn danger" onclick="requestTrade()">Request Trade</button>
     </div>` : ''}
     ${G.pro.tradeRequested ? `<div class="card" style="border-color:var(--yellow);"><div class="card-title" style="color:var(--yellow);">Trade Requested</div>
@@ -3802,6 +4471,51 @@ function computeLegacyData() {
     careerPPG, careerRPG, careerAPG, careerFGPct, career3PPct, careerFTPct,
     legacyScore, proStats,
   };
+}
+
+// ─── EVENTS PAGE ───
+
+function renderEventsPage(c) {
+  const events = G._careerEvents || [];
+  if (events.length === 0) {
+    c.innerHTML = `<div class="card"><div class="card-title">Career Events</div><div style="font-size:13px;color:var(--text-muted);text-align:center;padding:40px 0;">No career events yet. Events will occur as you progress through your career.</div></div>`;
+    return;
+  }
+
+  const catIcons = { media:'\u{1F4F0}', teammate:'\u{1F91D}', endorsement:'\u{1F4B0}', coach:'\u{1F4CB}', community:'\u{2764}', 'off-court':'\u{1F303}', contract:'\u{1F4DD}', trade:'\u{1F504}', recruit:'\u{1F50D}' };
+  const catLabels = { media:'Media', teammate:'Teammates', endorsement:'Endorsement', coach:'Coaching Staff', community:'Community', 'off-court':'Off the Court', contract:'Contract', trade:'Trade', recruit:'Recruiting' };
+
+  const byPhase = {};
+  events.forEach(ev => {
+    const key = ev.phase || 'unknown';
+    if (!byPhase[key]) byPhase[key] = [];
+    byPhase[key].push(ev);
+  });
+
+  const phaseOrder = ['highschool', 'college', 'pro'];
+  const phaseNames = { highschool: 'High School', college: 'College', pro: 'Pro Career' };
+
+  let html = `<div class="card"><div class="card-title">Career Events (${events.length})</div>
+    <div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Events that shaped your career journey.</div>`;
+
+  phaseOrder.forEach(phase => {
+    const phaseEvents = byPhase[phase];
+    if (!phaseEvents || phaseEvents.length === 0) return;
+    html += `<div style="margin-top:16px;margin-bottom:8px;font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;">${phaseNames[phase]||phase}</div>`;
+    phaseEvents.reverse().forEach(ev => {
+      html += `<div class="event-banner">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div style="font-weight:700;">${catIcons[ev.cat]||''} ${esc(ev.title)}</div>
+          <span class="badge badge-accent">${catLabels[ev.cat]||ev.cat}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);">Year ${ev.year}, Week ${ev.week}</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-top:4px;">Choice: "${esc(ev.choice)}"</div>
+      </div>`;
+    });
+  });
+
+  html += '</div>';
+  c.innerHTML = html;
 }
 
 // ─── LEGACY PAGE ───
